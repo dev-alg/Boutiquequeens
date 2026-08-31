@@ -242,10 +242,24 @@ a{color:inherit;text-decoration:none}
   font-size:1.2rem;cursor:pointer;z-index:2;
 }
 .detail-img{
-  width:100%;aspect-ratio:1/1;background:#f3eee6;
-  position:relative;overflow:hidden;
+  width:100%;
+  max-height:min(72vh,560px);
+  min-height:220px;
+  background:#f3eee6;
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
-.detail-img img{width:100%;height:100%;object-fit:cover}
+.detail-img img{
+  width:100%;
+  height:auto;
+  max-height:min(72vh,560px);
+  object-fit:contain;
+  object-position:center;
+  display:block;
+}
 .detail-body{padding:16px 18px 8px}
 .detail-cat{
   display:inline-block;font-size:.72rem;font-weight:700;
@@ -766,7 +780,13 @@ const COLOR_PALETTE = [
   ["cream","#FFF4D6","كريمي","Crème"],["brown","#6F4E37","بني","Marron"],
   ["gold","#D4AF37","ذهبي","Doré"],["green","#2E7D32","أخضر","Vert"],
   ["olive","#6B7A1E","زيتي","Olive"],["red","#C62828","أحمر","Rouge"],
-  ["pink","#EC407A","وردي","Rose"],["purple","#7B1FA2","بنفسجي","Violet"]
+  ["pink","#EC407A","وردي","Rose"],
+  ["purple","#7B1FA2","بنفسجي","Violet"],
+  ["purple-light","#CE93D8","بنفسجي فاتح","Violet clair"],
+  ["lilac","#B39DDB","ليلكي","Lilas"],
+  ["mauve","#9C6ADE","موف","Mauve"],
+  ["plum","#6A1B9A","برقوقي","Prune"],
+  ["orange","#FF9800","برتقالي","Orange"]
 ];
 const byKey = Object.fromEntries(COLOR_PALETTE.map(x=>[x[0],{key:x[0],hex:x[1],ar:x[2],fr:x[3]}]));
 const LIGHT = new Set(["white","silver","cream","yellow","gold","beige","gray"]);
