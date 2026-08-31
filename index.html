@@ -795,6 +795,7 @@ let lang = localStorage.getItem("queen_lang") || "ar";
 let PRODUCTS = [];
 let cart = JSON.parse(localStorage.getItem("queen_cart_v2")||"[]");
 let accessToken = localStorage.getItem("queen_admin_token")||"";
+let refreshToken = localStorage.getItem("queen_admin_refresh")||"";
 let detailProduct = null;
 let selectedColor = null;
 let selectedSize = null;
@@ -802,13 +803,67 @@ let imgIndex = 0;
 
 function t(ar,fr){ return lang==="fr" ? fr : ar; }
 function colorLabel(k){ const c=byKey[k]; return c ? (lang==="fr"?c.fr:c.ar) : k; }
-function money(n){ return (Number(n)||0).toLocaleString("ar-DZ") + " دج"; }
-function priceNumber(v){ return Number(String(v).replace(/[^0-9.]/g,""))||0; }
+function money(n){
+  const value = Number(n)||0;
+  return value.toLocaleString("de-DE") + " دج";
+}
+function priceNumber(v){
+  if(v===null || v===undefined) return 0;
+  let s = String(v).trim()
+    .replace(/\s/g,"")
+    .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
+    .replace(/٬/g,"")
+    .replace(/٫/g,".");
+  // Algerian/French-style "1.000" means 1000, while decimal input such as
+  // "1000.50" is preserved.
+  if(/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g,"");
+  else s = s.replace(/[^0-9.]/g,"");
+  return Number(s)||0;
+}
 function toast(msg){
   const el=document.getElementById("toast");
   el.textContent=msg; el.classList.add("show");
   clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove("show"),1800);
 }
+function tokenExpired(token){
+  try{
+    if(!token) return true;
+    const part=token.split(".")[1];
+    if(!part) return true;
+    const json=JSON.parse(decodeURIComponent(escape(atob(part.replace(/-/g,"+").replace(/_/g,"/")))));
+    return !json.exp || (Date.now()/1000 >= Number(json.exp)-30);
+  }catch(_){ return true; }
+}
+
+async function refreshAdminToken(){
+  if(!refreshToken) return false;
+  try{
+    const r=await fetch(SUPABASE_URL+"/auth/v1/token?grant_type=refresh_token",{
+      method:"POST",
+      headers:apiHeaders(""),
+      body:JSON.stringify({refresh_token:refreshToken})
+    });
+    const d=await r.json();
+    if(!r.ok || !d.access_token) throw new Error("refresh failed");
+    accessToken=d.access_token;
+    refreshToken=d.refresh_token||refreshToken;
+    localStorage.setItem("queen_admin_token",accessToken);
+    localStorage.setItem("queen_admin_refresh",refreshToken);
+    return true;
+  }catch(_){
+    accessToken="";
+    refreshToken="";
+    localStorage.removeItem("queen_admin_token");
+    localStorage.removeItem("queen_admin_refresh");
+    return false;
+  }
+}
+
+async function ensureAdminToken(){
+  if(accessToken && !tokenExpired(accessToken)) return true;
+  return await refreshAdminToken();
+}
+
 function apiHeaders(token=accessToken){
   const h={"apikey":SUPABASE_KEY,"Content-Type":"application/json"};
   if(token) h.Authorization="Bearer "+token;
@@ -1164,13 +1219,16 @@ const ITEMS_URL = SUPABASE_URL + "/rest/v1/order_items";
 let ADMIN_ORDERS = [];
 let ADMIN_ORDER_ITEMS = {};
 
-function openAdmin(){
+async function openAdmin(){
   const room = document.getElementById("adminRoom");
   room.classList.add("open");
   room.setAttribute("aria-hidden","false");
   document.body.classList.add("admin-open");
-  if(accessToken) showAdminPanel();
-  else showAdminLogin();
+  if(accessToken && !tokenExpired(accessToken)) showAdminPanel();
+  else if(refreshToken) {
+    if(await refreshAdminToken()) showAdminPanel();
+    else showAdminLogin();
+  } else showAdminLogin();
 }
 function closeAdmin(){
   const room = document.getElementById("adminRoom");
@@ -1215,14 +1273,18 @@ document.getElementById("adminLogin").onclick = async ()=>{
     const d = await r.json();
     if(!r.ok) throw new Error(d.error_description||d.msg||"فشل الدخول");
     accessToken = d.access_token;
+    refreshToken = d.refresh_token || "";
     localStorage.setItem("queen_admin_token", accessToken);
+    if(refreshToken) localStorage.setItem("queen_admin_refresh", refreshToken);
     showAdminPanel();
   }catch(e){ err.textContent = e.message; }
 };
 
 document.getElementById("adminLogout").onclick = ()=>{
   accessToken = "";
+  refreshToken = "";
   localStorage.removeItem("queen_admin_token");
+  localStorage.removeItem("queen_admin_refresh");
   showAdminLogin();
 };
 
@@ -1400,6 +1462,7 @@ function getAdminColors(){ return [...document.querySelectorAll("#productColorPa
 function getAdminSizes(){ return [...document.querySelectorAll("#productSizePalette input:checked")].map(i=>i.value); }
 
 async function uploadImages(files){
+  if(!await ensureAdminToken()) throw new Error(t("انتهت جلسة الإدارة. سجّلي الدخول مرة أخرى.","Session expirée. Veuillez vous reconnecter."));
   const paths=[];
   for(const file of files){
     const ext=(file.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"jpg");
@@ -1468,7 +1531,10 @@ document.getElementById("productForm").addEventListener("submit", async e=>{
   const err=document.getElementById("productError"); err.textContent="";
   const btn=document.getElementById("saveProduct"); btn.disabled=true;
   try{
-    if(!accessToken) throw new Error(t("سجّلي الدخول أولاً","Connectez-vous"));
+    if(!await ensureAdminToken()) {
+      showAdminLogin();
+      throw new Error(t("انتهت جلسة الإدارة. سجّلي الدخول مرة أخرى.","Session expirée. Veuillez vous reconnecter."));
+    }
     const id=document.getElementById("editId").value.trim();
     const files=[...document.getElementById("productImages").files];
     let paths=[];
