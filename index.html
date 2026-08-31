@@ -805,7 +805,7 @@ function t(ar,fr){ return lang==="fr" ? fr : ar; }
 function colorLabel(k){ const c=byKey[k]; return c ? (lang==="fr"?c.fr:c.ar) : k; }
 function money(n){
   const value = Number(n)||0;
-  return value.toLocaleString("de-DE") + " دج";
+  return String(value) + " دج";
 }
 function priceNumber(v){
   if(v===null || v===undefined) return 0;
