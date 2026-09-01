@@ -537,6 +537,30 @@ body.admin-open .bottom-bar{display:none!important}
   .bottom-bar{display:none}
 }
 </style>
+
+<style id="dhd-directory-style">
+.dhd-directory{max-width:1100px}
+.dhd-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.dhd-summary>div{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;text-align:center;box-shadow:var(--shadow)}
+.dhd-summary b{display:block;font-size:1.35rem;color:var(--gold)}
+.dhd-summary span{display:block;font-size:.72rem;color:var(--muted);margin-top:3px}
+.dhd-table-wrap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
+.dhd-table{width:100%;border-collapse:collapse;min-width:560px}
+.dhd-table th,.dhd-table td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:right}
+.dhd-table th{background:var(--gold-s);font-size:.78rem}
+.dhd-table td{font-size:.82rem}
+.dhd-table td:first-child,.dhd-table th:first-child{text-align:center;width:50px}
+.dhd-table small{display:block;color:var(--muted);font-size:.65rem;direction:ltr;text-align:right;margin-top:1px}
+.dhd-count{display:inline-grid;place-items:center;min-width:32px;height:32px;padding:0 8px;border-radius:999px;background:var(--black);color:var(--gold-l);font-weight:900}
+.dhd-count.zero{background:#eee;color:#999}
+.dhd-note{margin-top:10px;color:var(--muted);font-size:.72rem;line-height:1.7}
+.dhd-note code{font-size:.68rem}
+@media(max-width:600px){
+  .dhd-summary{grid-template-columns:1fr 1fr}
+  .dhd-summary>div:last-child{grid-column:1/-1}
+}
+</style>
+
 </head>
 <body>
 
@@ -1647,5 +1671,27 @@ updateCartUI();
 loadProducts();
 if(lang==="fr") document.getElementById("langBtn").click();
 </script>
+
+<section class="section dhd-directory" id="dhdDirectory">
+  <div class="section-head">
+    <div>
+      <h2>شبكة مكاتب DHD Express</h2>
+      <span>إحصاء جميع الولايات حسب قائمة المكاتب الموجودة في المتجر</span>
+    </div>
+  </div>
+  <div class="dhd-summary">
+    <div><b>139</b><span>إجمالي نقاط/مكاتب DHD المسجلة</span></div>
+    <div><b>58</b><span>ولاية</span></div>
+    <div><b>55</b><span>ولايات بها مكاتب</span></div>
+  </div>
+  <div class="dhd-table-wrap">
+    <table class="dhd-table">
+      <thead><tr><th>#</th><th>الولاية</th><th>العدد</th><th>الحالة</th></tr></thead>
+      <tbody><tr><td>01</td><td><b>أدرار</b><small>Adrar</small></td><td><span class="dhd-count">1</span></td><td>1 مكتب</td></tr><tr><td>02</td><td><b>الشلف</b><small>Chlef</small></td><td><span class="dhd-count">4</span></td><td>4 مكاتب</td></tr><tr><td>03</td><td><b>الأغواط</b><small>Laghouat</small></td><td><span class="dhd-count">1</span></td><td>1 مكتب</td></tr><tr><td>04</td><td><b>أم البواقي</b><small>Oum El Bouaghi</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>05</td><td><b>باتنة</b><small>Batna</small></td><td><span class="dhd-count">4</span></td><td>4 مكاتب</td></tr><tr><td>06</td><td><b>بجاية</b><small>Bejaia</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>07</td><td><b>بسكرة</b><small>Biskra</small></td><td><span class="dhd-count">1</span></td><td>1 مكتب</td></tr><tr><td>08</td><td><b>بشار</b><small>Bechar</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>09</td><td><b>البليدة</b><small>Blida</small></td><td><span class="dhd-count">7</span></td><td>7 مكاتب</td></tr><tr><td>10</td><td><b>البويرة</b><small>Bouira</small></td><td><span class="dhd-count">1</span></td><td>1 مكتب</td></tr><tr><td>11</td><td><b>تمنراست</b><small>Tamanrasset</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>12</td><td><b>تبسة</b><small>Tebessa</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>13</td><td><b>تلمسان</b><small>Tlemcen</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>14</td><td><b>تيارت</b><small>Tiaret</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>15</td><td><b>تيزي وزو</b><small>Tizi Ouzou</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>16</td><td><b>الجزائر العاصمة</b><small>Alger</small></td><td><span class="dhd-count">10</span></td><td>10 مكاتب</td></tr><tr><td>17</td><td><b>الجلفة</b><small>Djelfa</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>18</td><td><b>جيجل</b><small>Jijel</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>19</td><td><b>سطيف</b><small>Sétif</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>20</td><td><b>سعيدة</b><small>Saida</small></td><td><span class="dhd-count">1</span></td><td>1 مكتب</td></tr><tr><td>21</td><td><b>سكيكدة</b><small>Skikda</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>22</td><td><b>سيدي بلعباس</b><small>Sidi Bel Abbès</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>23</td><td><b>عنابة</b><small>Annaba</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>24</td><td><b>قالمة</b><small>Guelma</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>25</td><td><b>قسنطينة</b><small>Constantine</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>26</td><td><b>المدية</b><small>Medea</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>27</td><td><b>مستغانم</b><small>Mostaganem</small></td><td><span class="dhd-count">4</span></td><td>4 مكاتب</td></tr><tr><td>28</td><td><b>المسيلة</b><small>M&#x27;Sila</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>29</td><td><b>معسكر</b><small>Mascara</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>30</td><td><b>ورقلة</b><small>Ouargla</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>31</td><td><b>وهران</b><small>Oran</small></td><td><span class="dhd-count">6</span></td><td>6 مكاتب</td></tr><tr><td>32</td><td><b>البيض</b><small>El Bayadh</small></td><td><span class="dhd-count">1</span></td><td>1 مكتب</td></tr><tr><td>33</td><td><b>إليزي</b><small>Illizi</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>34</td><td><b>برج بوعريريج</b><small>Bordj Bou Arreridj</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>35</td><td><b>بومرداس</b><small>Boumerdes</small></td><td><span class="dhd-count">4</span></td><td>4 مكاتب</td></tr><tr><td>36</td><td><b>الطارف</b><small>El Tarf</small></td><td><span class="dhd-count">1</span></td><td>1 مكتب</td></tr><tr><td>37</td><td><b>تندوف</b><small>Tindouf</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>38</td><td><b>تيبازة</b><small>Tipaza</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>39</td><td><b>عين الدفلى</b><small>Ain Defla</small></td><td><span class="dhd-count">4</span></td><td>4 مكاتب</td></tr><tr><td>40</td><td><b>تيسمسيلت</b><small>Tissemsilt</small></td><td><span class="dhd-count">1</span></td><td>1 مكتب</td></tr><tr><td>41</td><td><b>ميلة</b><small>Mila</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>42</td><td><b>غليزان</b><small>Relizane</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>43</td><td><b>خنشلة</b><small>Khenchela</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>44</td><td><b>سوق أهراس</b><small>Souk Ahras</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>45</td><td><b>عين تموشنت</b><small>Ain Temouchent</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>46</td><td><b>الوادي</b><small>El Oued</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>47</td><td><b>النعامة</b><small>Naama</small></td><td><span class="dhd-count">1</span></td><td>1 مكتب</td></tr><tr><td>48</td><td><b>غرداية</b><small>Ghardaia</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>49</td><td><b>أولاد جلال</b><small>Ouled Djellal</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>50</td><td><b>المغير</b><small>M&#x27;Ghair</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>51</td><td><b>تقرت</b><small>Touggourt</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>52</td><td><b>المنيعة</b><small>Meniaa</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>53</td><td><b>عين صالح</b><small>In Salah</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>54</td><td><b>تيميمون</b><small>Timimoun</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>55</td><td><b>بني عباس</b><small>Béni Abbès</small></td><td><span class="dhd-count">1</span></td><td>1 مكتب</td></tr><tr><td>56</td><td><b>برج باجي مختار</b><small>Bordj Badji Mokhtar</small></td><td><span class="dhd-count zero">0</span></td><td>لا يوجد مكتب مسجل</td></tr><tr><td>57</td><td><b>إن قزام</b><small>In Guezzam</small></td><td><span class="dhd-count zero">0</span></td><td>لا يوجد مكتب مسجل</td></tr><tr><td>58</td><td><b>جانت</b><small>Djanet</small></td><td><span class="dhd-count zero">0</span></td><td>لا يوجد مكتب مسجل</td></tr></tbody>
+    </table>
+  </div>
+  <p class="dhd-note">ملاحظة: العدد هنا محسوب من عناصر <code>DHD_EXPRESS_OFFICES</code> الموجودة داخل هذا الملف، لذلك فهو يعكس القائمة المضافة للموقع وليس ادعاءً بمعلومة خارجية عن الشبكة.</p>
+</section>
+
 </body>
 </html>
