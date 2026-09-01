@@ -603,6 +603,14 @@ body.admin-open .bottom-bar{display:none!important}
 .admin-color-missing{color:#777}
 .admin-order-variants{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;color:#aaa;font-size:11px;line-height:1.8}
 </style>
+
+<style id="whatsapp-contact-style">
+/* WhatsApp contact button */
+.whatsapp-float{position:fixed;left:18px;bottom:18px;z-index:9999;display:flex;align-items:center;gap:8px;background:#25D366;color:#fff;text-decoration:none;padding:12px 16px;border-radius:999px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,.22);direction:ltr}
+.whatsapp-float:hover{filter:brightness(.95);transform:translateY(-1px)}
+@media(max-width:640px){.whatsapp-float{left:12px;bottom:76px;padding:11px 14px;font-size:14px}}
+</style>
+
 </head>
 <body>
 
@@ -643,6 +651,9 @@ body.admin-open .bottom-bar{display:none!important}
   <strong>Queen Shop</strong>
   <p id="footerText">اختاري ما يناسبكِ، أضيفيه إلى السلة وأرسلي طلبكِ بسهولة.</p>
 </footer>
+<!-- WhatsApp contact -->
+<a class="whatsapp-float" href="https://wa.me/213673388640" target="_blank" rel="noopener" aria-label="WhatsApp Queen Shop">💬 WhatsApp: 0673388640</a>
+
 
 <!-- Bottom cart bar (mobile) -->
 <div class="bottom-bar" id="bottomBar" hidden>
@@ -1757,32 +1768,85 @@ async function confirmAdminForDeletion(count){
   const password = prompt("أدخلي كلمة مرور الإدارة لتأكيد الحذف:");
   if(password===null) return null;
   if(!email.trim() || !password){ alert("يجب إدخال البريد وكلمة المرور."); return null; }
+
   const auth = await fetch(SUPABASE_URL+"/auth/v1/token?grant_type=password",{
-    method:"POST", headers:apiHeaders(""), body:JSON.stringify({email:email.trim(), password})
+    method:"POST",
+    headers:apiHeaders(""),
+    body:JSON.stringify({email:email.trim(), password})
   });
   const authData = await auth.json().catch(()=>({}));
-  if(!auth.ok) throw new Error(authData.error_description||authData.msg||"بيانات التأكيد غير صحيحة.");
-  return {...apiHeaders(authData.access_token),"Prefer":"return=minimal"};
+  if(!auth.ok || !authData.access_token){
+    throw new Error(authData.error_description||authData.msg||"بيانات التأكيد غير صحيحة.");
+  }
+
+  // نطلب تمثيل الصفوف المحذوفة حتى لا تظهر رسالة نجاح عندما تمنع RLS الحذف بصمت.
+  return {...apiHeaders(authData.access_token),"Prefer":"return=representation"};
+}
+
+async function readSupabaseError(response){
+  const raw = await response.text().catch(()=>"");
+  try{
+    const data = JSON.parse(raw);
+    return data.message || data.details || data.hint || raw;
+  }catch(_){ return raw; }
 }
 
 async function deleteOrdersByIds(ids){
-  const unique=[...new Set(ids.map(String))];
+  const unique=[...new Set(ids.map(String).filter(Boolean))];
   if(!unique.length) return 0;
+
   const headers = await confirmAdminForDeletion(unique.length);
   if(!headers) return 0;
+
   let deleted=0;
+  const failed=[];
+
   for(const id of unique){
-    const di = await fetch(ITEMS_URL+"?order_id=eq."+encodeURIComponent(id),{method:"DELETE",headers});
-    if(!di.ok) throw new Error("تعذر حذف عناصر أحد الطلبات: "+await di.text());
-    const d = await fetch(ORDERS_URL+"?id=eq."+encodeURIComponent(id),{method:"DELETE",headers});
-    if(!d.ok) throw new Error("تعذر حذف أحد الطلبات: "+await d.text());
+    // حذف عناصر الطلب أولاً. عدم وجود عناصر ليس خطأ.
+    const di = await fetch(
+      ITEMS_URL+"?order_id=eq."+encodeURIComponent(id),
+      {method:"DELETE",headers}
+    );
+    if(!di.ok){
+      const msg = await readSupabaseError(di);
+      throw new Error("تعذر حذف عناصر الطلب. تأكدي من سياسة DELETE في order_items. "+msg);
+    }
+
+    // نتحقق من أن الطلب نفسه حُذف فعلياً؛ RLS قد يعيد 204/200 بدون حذف أي صف.
+    const d = await fetch(
+      ORDERS_URL+"?id=eq."+encodeURIComponent(id),
+      {method:"DELETE",headers}
+    );
+    if(!d.ok){
+      const msg = await readSupabaseError(d);
+      throw new Error("تعذر حذف الطلب. تأكدي من سياسة DELETE في orders. "+msg);
+    }
+
+    const removedRows = await d.json().catch(()=>[]);
+    if(!Array.isArray(removedRows) || removedRows.length===0){
+      failed.push(id);
+      continue;
+    }
     deleted++;
   }
-  const removed = new Set(unique);
-  ADMIN_ORDERS = ADMIN_ORDERS.filter(o=>!removed.has(String(o.id)));
-  unique.forEach(id=>{ delete ADMIN_ORDER_ITEMS[id]; SELECTED_ORDER_IDS.delete(id); });
+
+  const actuallyRemoved = new Set(unique.filter(id=>!failed.includes(id)));
+  ADMIN_ORDERS = ADMIN_ORDERS.filter(o=>!actuallyRemoved.has(String(o.id)));
+  [...actuallyRemoved].forEach(id=>{
+    delete ADMIN_ORDER_ITEMS[id];
+    SELECTED_ORDER_IDS.delete(id);
+  });
+
   renderOrdersList();
   updateDashboard();
+
+  if(failed.length){
+    throw new Error(
+      `لم يتم حذف ${failed.length} طلب لأن Supabase منع العملية عبر RLS. `+
+      `أضيفي سياسة DELETE للمسؤول على جدولي orders و order_items ثم أعيدي المحاولة.`
+    );
+  }
+
   toast(`تم حذف ${deleted} طلب${deleted===1?"":"ات"} نهائياً ✓`);
   return deleted;
 }
