@@ -605,10 +605,37 @@ body.admin-open .bottom-bar{display:none!important}
 </style>
 
 <style id="whatsapp-contact-style">
-/* WhatsApp contact button */
-.whatsapp-float{position:fixed;left:18px;bottom:18px;z-index:9999;display:flex;align-items:center;gap:8px;background:#25D366;color:#fff;text-decoration:none;padding:12px 16px;border-radius:999px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,.22);direction:ltr}
-.whatsapp-float:hover{filter:brightness(.95);transform:translateY(-1px)}
-@media(max-width:640px){.whatsapp-float{left:12px;bottom:76px;padding:11px 14px;font-size:14px}}
+/* Stable WhatsApp button: fixed at top and only opens on explicit tap */
+.whatsapp-float{
+  position:fixed;
+  /* يوضع أسفل شريط التنقل حتى لا يغطي أيقونات السلة/الإدارة/اللغة */
+  top:calc(var(--nav-h) + 8px);
+  left:12px;
+  z-index:10000;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  background:#25D366;
+  color:#fff;
+  text-decoration:none;
+  padding:9px 13px;
+  border-radius:999px;
+  font-weight:800;
+  font-size:13px;
+  line-height:1;
+  box-shadow:0 6px 18px rgba(0,0,0,.18);
+  direction:ltr;
+  white-space:nowrap;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+.whatsapp-float:hover,.whatsapp-float:active{filter:none;transform:none}
+/* حجز مساحة للزر حتى لا يغطي محتوى الصفحة */
+.hero{margin-top:48px}
+@media(max-width:640px){
+  .whatsapp-float{top:calc(var(--nav-h) + 6px);left:10px;padding:8px 11px;font-size:12px}
+  .hero{margin-top:44px}
+}
 </style>
 
 </head>
@@ -652,7 +679,7 @@ body.admin-open .bottom-bar{display:none!important}
   <p id="footerText">اختاري ما يناسبكِ، أضيفيه إلى السلة وأرسلي طلبكِ بسهولة.</p>
 </footer>
 <!-- WhatsApp contact -->
-<a class="whatsapp-float" href="https://wa.me/213673388640" target="_blank" rel="noopener" aria-label="WhatsApp Queen Shop">💬 WhatsApp: 0673388640</a>
+<a class="whatsapp-float" id="whatsappContact" href="https://wa.me/213673388640" target="_blank" rel="noopener noreferrer" aria-label="فتح واتساب Queen Shop">💬 WhatsApp: 0673388640</a>
 
 
 <!-- Bottom cart bar (mobile) -->
@@ -2215,6 +2242,17 @@ if(lang==="fr") document.getElementById("langBtn").click();
 
 <script id="order-image-viewer-init">
 document.addEventListener("DOMContentLoaded", ()=>{ initOrderImageViewer(); });
+</script>
+
+
+<script id="whatsapp-explicit-click-guard">
+(function(){
+  var wa=document.getElementById("whatsappContact");
+  if(!wa) return;
+  wa.addEventListener("click",function(e){
+    if(!e.isTrusted) e.preventDefault();
+  });
+})();
 </script>
 
 </body>
