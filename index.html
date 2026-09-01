@@ -538,29 +538,61 @@ body.admin-open .bottom-bar{display:none!important}
 }
 </style>
 
-<style id="dhd-directory-style">
-.dhd-directory{max-width:1100px}
-.dhd-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
-.dhd-summary>div{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;text-align:center;box-shadow:var(--shadow)}
-.dhd-summary b{display:block;font-size:1.35rem;color:var(--gold)}
-.dhd-summary span{display:block;font-size:.72rem;color:var(--muted);margin-top:3px}
-.dhd-table-wrap{overflow:auto;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
-.dhd-table{width:100%;border-collapse:collapse;min-width:560px}
-.dhd-table th,.dhd-table td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:right}
-.dhd-table th{background:var(--gold-s);font-size:.78rem}
-.dhd-table td{font-size:.82rem}
-.dhd-table td:first-child,.dhd-table th:first-child{text-align:center;width:50px}
-.dhd-table small{display:block;color:var(--muted);font-size:.65rem;direction:ltr;text-align:right;margin-top:1px}
-.dhd-count{display:inline-grid;place-items:center;min-width:32px;height:32px;padding:0 8px;border-radius:999px;background:var(--black);color:var(--gold-l);font-weight:900}
-.dhd-count.zero{background:#eee;color:#999}
-.dhd-note{margin-top:10px;color:var(--muted);font-size:.72rem;line-height:1.7}
-.dhd-note code{font-size:.68rem}
+<style id="order-product-images-style">
+.order-products-with-images{display:flex;flex-direction:column;gap:9px;margin-top:10px}
+.order-product-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(255,255,255,.07)}
+.order-product-thumb{width:58px;height:58px;min-width:58px;border-radius:10px;object-fit:cover;cursor:zoom-in;border:1px solid rgba(255,255,255,.12);background:#111}
+.order-product-info{min-width:0;flex:1}
+.order-product-info strong{display:block;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.order-product-info small{display:block;color:#aaa;font-size:.68rem;margin-top:3px;line-height:1.5}
+.order-image-empty{width:58px;height:58px;min-width:58px;border-radius:10px;display:grid;place-items:center;background:#16181d;color:#777;font-size:.62rem;text-align:center;border:1px solid rgba(255,255,255,.08)}
+.order-image-viewer{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.94);display:none;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+.order-image-viewer.is-open{display:flex}
+.order-image-viewer img{max-width:95vw;max-height:92vh;object-fit:contain;border-radius:8px;box-shadow:0 15px 60px rgba(0,0,0,.6);cursor:default}
+.order-image-viewer button{position:absolute;top:18px;right:18px;width:42px;height:42px;border:0;border-radius:50%;background:#fff;color:#111;font-size:24px;line-height:1;cursor:pointer}
 @media(max-width:600px){
-  .dhd-summary{grid-template-columns:1fr 1fr}
-  .dhd-summary>div:last-child{grid-column:1/-1}
+  .order-product-thumb,.order-image-empty{width:50px;height:50px;min-width:50px}
+  .order-image-viewer{padding:12px}
 }
 </style>
 
+
+<style id="order-variant-badge-style">
+.order-variant-badge{display:inline-flex;align-items:center;gap:5px;margin-inline-end:5px;margin-top:4px;padding:3px 7px;border-radius:7px;background:rgba(255,255,255,.06);color:#ddd;font-size:.66rem}
+.order-variant-badge b{color:var(--gold-l);font-weight:800}
+</style>
+
+<style id="admin-order-products-real-style">
+.admin-order-products{margin:8px 0;padding:7px 10px;background:#0f1115;border-radius:10px}
+.admin-order-product{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.07);direction:rtl}
+.admin-order-product:last-child{border-bottom:0}
+.admin-order-product-img{width:62px;height:62px;min-width:62px;border-radius:10px;object-fit:cover;background:#17191e;border:1px solid rgba(255,255,255,.12);cursor:zoom-in}
+.admin-order-product-img.no-img{display:grid;place-items:center;color:#777;font-size:10px;text-align:center;cursor:default}
+.admin-order-product-data{flex:1;min-width:0;text-align:right}
+.admin-order-product-data strong{display:block;font-size:13px;color:#eee;margin-bottom:5px}
+.admin-order-variants{display:flex;flex-wrap:wrap;gap:4px 9px;color:#aaa;font-size:11px;line-height:1.6}
+.admin-order-variants b{color:var(--gold-l)}
+.admin-order-product-price{margin-top:3px;color:#ddd;font-size:11px}
+</style>
+<style id="admin-order-final-variants-fix">
+.admin-order-products{margin:8px 0;padding:7px 10px;background:#0f1115;border-radius:10px}
+.admin-order-product{display:flex;align-items:center;gap:11px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.07);direction:rtl}
+.admin-order-product:last-child{border-bottom:0}
+.admin-order-product-img{width:68px;height:68px;min-width:68px;border-radius:11px;object-fit:cover;background:#17191e;border:1px solid rgba(255,255,255,.12);cursor:zoom-in}
+.admin-order-product-img.no-img{display:grid;place-items:center;color:#777;font-size:10px;text-align:center;cursor:default}
+.admin-order-product-data{flex:1;min-width:0;text-align:right}
+.admin-order-product-data strong{display:block;font-size:14px;color:#eee;margin-bottom:5px}
+.admin-order-variants{display:flex;flex-wrap:wrap;gap:5px 10px;color:#aaa;font-size:11px;line-height:1.7}
+.admin-order-variants b{color:var(--gold-l)}
+.admin-order-variants .variant-missing b{color:#777}
+.admin-order-product-price{margin-top:3px;color:#ddd;font-size:11px}
+</style>
+<style id="admin-variant-visual-fix">
+.admin-color-choice{display:inline-flex;align-items:center;gap:5px}
+.admin-color-swatch{display:inline-block;width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.7);vertical-align:middle;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.admin-color-missing{color:#777}
+.admin-order-variants{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;color:#aaa;font-size:11px;line-height:1.8}
+</style>
 </head>
 <body>
 
@@ -784,8 +816,19 @@ body.admin-open .bottom-bar{display:none!important}
 </div>
 
 <div class="toast" id="toast"></div>
+<div id="qs-runtime-error" hidden style="position:fixed;inset:auto 12px 80px;z-index:9999;background:#111;color:#fff;border:1px solid #b9923b;border-radius:14px;padding:12px;font-size:.78rem;box-shadow:0 12px 30px rgba(0,0,0,.25)"></div>
 
 <script>
+window.addEventListener("error",e=>{
+  console.error(e.error||e.message);
+  const el=document.getElementById("qs-runtime-error");
+  if(el){el.hidden=false;el.textContent="حدث خطأ في تشغيل الموقع. أعيدي تحميل الصفحة، وإذا استمر الخطأ افتحي Console للتفاصيل.";}
+});
+window.addEventListener("unhandledrejection",e=>{
+  console.error(e.reason);
+  const el=document.getElementById("qs-runtime-error");
+  if(el){el.hidden=false;el.textContent="حدث خطأ في الاتصال أو تنفيذ عملية. يمكنك إعادة المحاولة.";}
+});
 const SHIPPING_RATES = {"Adrar":[1100,600],"Chlef":[700,400],"Laghouat":[900,500],"Oum El Bouaghi":[800,400],"Batna":[800,400],"Bejaia":[700,400],"Biskra":[900,500],"Bechar":[1100,600],"Blida":[500,250],"Bouira":[650,400],"Tamanrasset":[1300,800],"Tebessa":[800,500],"Tlemcen":[800,400],"Tiaret":[800,400],"Tizi Ouzou":[650,400],"Alger":[400,200],"Djelfa":[900,500],"Jijel":[700,400],"Sétif":[700,400],"Saida":[800,400],"Skikda":[700,400],"Sidi Bel Abbès":[700,400],"Annaba":[700,400],"Guelma":[800,400],"Constantine":[700,400],"Medea":[600,400],"Mostaganem":[700,400],"M'Sila":[800,500],"Mascara":[700,400],"Ouargla":[1000,500],"Oran":[700,400],"El Bayadh":[1000,500],"Illizi":[1300,600],"Bordj Bou Arreridj":[700,400],"Boumerdes":[600,350],"El Tarf":[800,400],"Tindouf":[1300,600],"Tipaza":[600,350],"Ain Defla":[700,400],"Tissemsilt":[700,400],"Mila":[700,400],"Relizane":[700,400],"Khenchela":[800,500],"Souk Ahras":[800,400],"Ain Temouchent":[700,400],"El Oued":[1000,500],"Naama":[1000,500],"Ghardaia":[1000,500],"Ouled Djellal":[900,500],"M'Ghair":[1000,500],"Touggourt":[1000,500],"Meniaa":[1100,600],"In Salah":[1200,700],"Timimoun":[1200,700],"Béni Abbès":[1100,600],"Bordj Badji Mokhtar":[1300,800],"In Guezzam":[1300,800],"Djanet":[1300,800]};
 
 const DHD_EXPRESS_OFFICES = {"Adrar":["DHD Express — Adrar: مقابل ثانوية الشيخ عبد الكريم المغيلي، بجانب سوبرات إسلام (حي القرية)"],"Chlef":["DHD Express — الشلف: حي 60 مسكن ترقوي، حي الشارة، مقابل محل LE BON PRIX","DHD Express — تنس: شارع الثورة، مقابل مستشفى أحمد بوراس","DHD Express — الشلف: 587R+F87، الشلف (DHD Livraison)","DHD Express — الشلف 02: 587R+JC6، الشلف"],"Laghouat":["DHD Express — الأغواط: شارع بن سحنون، بجانب مركز التصوير الطبي، حي المقام"],"Oum El Bouaghi":["DHD Express — عين فكرون: على بعد 300م من محطة الحافلات، بجانب وكالة CNAS","DHD Express — أم البواقي: الطريق الولائي مقابل مديرية الأشغال العمومية"],"Batna":["DHD Express — باتنة: دوار حي 1020 مسكن، الطريق نحو CASNOS","DHD Express — باتنة: G5V8+FWF، باتنة","DHD Express — باتنة: H523+38Q، باتنة","DHD Express — بريكة: حي مسجد الرحمة، بعد الدرك، وسط مدينة بريكة"],"Bejaia":["DHD Express — بجاية: شارع محفودي فاتح، برنامج 250 مسكن ترقوي، إقامة الصنوبر، عمارة I","DHD Express — خراطة (Kherrata): نقطة DHD في خراطة"],"Biskra":["DHD Express — بسكرة: شارع الإخوة مناني، بجانب حلويات بن شريف"],"Bechar":["DHD Express — بشار: وسط المدينة، بجانب مخبر التحاليل ABSI","DHD Express — بشار: JQ9J+8H2، بالقرب من طريق منوني","DHD Express — بشار: JQFM+GGC، بجانب مخبر عبابسة"],"Blida":["DHD Express — البليدة: طريق محمد والي، مقابل إقامة الشريعة، بولفار 20 متر","DHD Express — أولاد يعيش: مقابل بريد الجزائر","DHD Express — بوفاريك: 12 بولفار علي مختاري","DHD Express — بوعينان: شارع طماشيت عياش رقم 18","DHD Express — بني مراد","DHD Express — أولاد يعيش: GV74+MRF، أولاد يعيش","DHD Express — البليدة: FRJ9+G7X، شارع محمد والي، البليدة"],"Bouira":["DHD Express — البويرة: حي حركات، التعاونية العقارية، Belle Vue"],"Tamanrasset":["DHD Express — تمنراست: حي سرسوف، الطريق الجانبي للتكوين المهني، مقابل شارع طبيب العظام بن أحمد","DHD Express — تمنراست: QGWJ+3VX، تمنراست","DHD Express — تمنراست: QGRG+QG3، تمنراست"],"Tebessa":["DHD Express — تبسة: سكانسكا، حي الأمل، خلف المسجد الكبير","DHD Express — تبسة: C432+X9F، تبسة"],"Tlemcen":["DHD Express — تلمسان: شارع شتوان، بجانب محطة بنزين سيدي سعيد","DHD Express — سبدو: بجانب حمام بلحسين والمستشفى","DHD Express — تلمسان: VMVR+P6W، تلمسان"],"Tiaret":["DHD Express — تيارت: طريق الفيدا، قبل وكالة التشغيل القديمة، بجانب صيدلية بن هني","DHD Express — تيارت: تيارت 14000","DHD Express — قصر الشلالة: بعد مقر Mobilis، قصر الشلالة"],"Tizi Ouzou":["DHD Express — تيزي وزو: خلف مديرية الضرائب، مقابل سلالم الملعب المتعدد الرياضات","DHD Express — تيزي وزو: مبنى أزرق، 31 شارع أشرفوش محمد، مقابل شارع عبان رمضان"],"Alger":["DHD Express — بئر توتة: مقابل سونلغاز","DHD Express — جسر قسنطينة/بئر خادم: الطريق الروماني الشراقة، بجانب معهد باستور","DHD Express — الرغاية: حي LPP بورادة","DHD Express — باب الزوار: حي AADL إسماعيل يافصح","DHD Express — باب الوادي: مقابل اتصالات الجزائر ومركز التكوين","DHD Express — القبة: حي سعيدون محمد رقم 173، جنان بن عمر","DHD Express — الشراقة: بجانب معهد باستور","DHD Express — الدرارية","DHD Express — بئر خادم/بئر خادم: P26X+36M، الطريق الروماني","DHD Express — القبة: Rue Taher LAALEM، القبة"],"Djelfa":["DHD Express — الجلفة: حي 5 جويلية، باتجاه جامعة زيان عاشور، مقابل المفوضية المركزية","DHD Express — عين وسارة: شارع دبي بين المسجد العتيق وحمام الحاج موسى"],"Jijel":["DHD Express — جيجل: مكتب DHD Livraison Express في مدينة جيجل","DHD Express — جيجل: RQ8C+W2H، جيجل"],"Sétif":["DHD Express — سطيف: حي الهضاب، 50 مسكن","DHD Express — العلمة: بجانب مقهى STARBUCKS","DHD Express — سطيف: Ave Saber Mohamed، سطيف"],"Saida":["DHD Express — سعيدة: كاستور، مقابل جامع فاطمة الزهراء"],"Skikda":["DHD Express — سكيكدة: بجانب المركز الجهوي للخدمة الوطنية ومركب شباب الإخوة ساكر","DHD Express — سكيكدة: VW84+JJ3، N3، سكيكدة","DHD Express — الحروش: شارع غريب تحت الأمن الحضري، الحروش"],"Sidi Bel Abbès":["DHD Express — سيدي بلعباس: بالقرب من محطة ترامواي أديال بن حمودة، مقابل محل ملابس الأطفال Bébé Luxe","DHD Express — سيدي بلعباس: طريق وهران بجانب قاعة حفلات لالة زهرا"],"Annaba":["DHD Express — البوني: 900 مسكن، مقابل محل حاج ڨريفة","DHD Express — عنابة/سيدي عاشور: VPH7+PWQ، سيدي عاشور","DHD Express — البوني: VP3X+2RJ، البوني"],"Guelma":["DHD Express — قالمة: باب سكيكدة، مقابل عمارة جيني سيدار","DHD Express — قالمة: Boulevard du Volontariat، قالمة"],"Constantine":["DHD Express — قسنطينة: مكتب DHD Express في مدينة قسنطينة","DHD Express — علي منجلي: قسنطينة","DHD Express — قسنطينة: 7H7G+W6X، قسنطينة"],"Medea":["DHD Express — المدية: القطب الحضري، مقابل المركز التجاري وبجانب محطة بن هفري","DHD Express — المدية: 7Q9R+36P، القطب الحضري","DHD Express — المدية: 15 Rue Pôle Urbain"],"Mostaganem":["DHD Express — مستغانم: شمومة، بجانب المراقبة التقنية","DHD Express — مستغانم: X492+7C8، شارع عيسات إيدير","DHD Express — شمومة: حي شمومة، مستغانم","DHD Express — مزغران (Mazagran): مزغران"],"M'Sila":["DHD Express — المسيلة: حي سونتكس، أمام مسجد الحسن البصري","DHD Express — زرزر","DHD Express — بوسعادة: حي الكادات أمام مخبر تحاليل إيدير، بوسعادة"],"Mascara":["DHD Express — معسكر: طريق ميزان، بجانب طبيب العمل","DHD Express — سيق","DHD Express — معسكر: معسكر، الجزائر"],"Ouargla":["DHD Express — ورقلة: شارع النصر، بجانب عيادة الأسنان بوخريس","DHD Express — ورقلة: ورقلة 30000","DHD Express — حاسي مسعود: P336+MFQ، حاسي مسعود"],"Oran":["DHD Express — وهران: العقيد لطفي، مقابل البريد قرب مفوضية الشرطة التاسعة","DHD Express — سيدي الشحمي: حي الياسمين، قرب سوبرات ميرا","DHD Express — بئر الجير","DHD Express — بئر الجير: PCC5+G2P، بئر الجير","DHD Express — وهران/مارافال: M9G2+7F4، وهران","DHD Express — ياسمين: حي الياسمين، وهران"],"El Bayadh":["DHD Express — البيض: M2Q6+6GG، DHD Livraison El Bayadh"],"Illizi":["DHD Express — إيليزي: بجانب مقر البلدية، مقابل بيطري وسط المدينة","DHD Express — إيليزي: GF3P+XF4، إيليزي"],"Bordj Bou Arreridj":["DHD Express — برج بوعريريج: حي 1 نوفمبر، صوالح، بجانب محطة طاكسي المصادر، مقابل دار الشباب","DHD Express — برج بوعريريج: 3Q9F+P2G، برج بوعريريج"],"Boumerdes":["DHD Express — بومرداس: حي فرانز فانون، محل 03 بالطابق الأرضي، بجانب فندق لي ليلاس","DHD Express — برج منايل: التعاونية، بجانب عيادة الأسنان بلحسن","DHD Express — بومرداس: 0035، بومرداس","DHD Express — برج منايل: PPWG+93G، التعاونية، برج منايل"],"El Tarf":["DHD Express — الطارف: حي الركاب، قرب بنك BDL، مقابل دار الشباب"],"Tindouf":["DHD Express — تندوف: محل رقم 2، حي القصابي","DHD Express — تندوف: MVG7+VFH، أمام مكتبة مجدوبي، تندوف"],"Tipaza":["DHD Express — القليعة: شارع بوناطيرو جلول، بجانب الملعب القديم","DHD Express — تيبازة: HFR7+3M3، تيبازة"],"Ain Defla":["DHD Express — عين الدفلى: حي نجم محمد، مقابل فندق نجم","DHD Express — خميس مليانة: طريق القايد، تحت كوندور","DHD Express — العطاف","DHD Express — عين الدفلى: 7X33+XHF، عين الدفلى"],"Tissemsilt":["DHD Express — تيسمسيلت: الطريق المزدوج عين البرج، مقابل السوق المغطى السعادة، خلف ثانوية بونعامة"],"Mila":["DHD Express — ميلة: مكتب DHD Express في مدينة ميلة","DHD Express — ميلة: F723+M88، ميلة"],"Relizane":["DHD Express — غليزان: بولفار زمورة، مقابل CEM الجديد","DHD Express — غليزان: PHV6+2PW، شارع الإخوة بسايح، غليزان"],"Khenchela":["DHD Express — خنشلة: بجانب مديرية المجاهدين، مقابل سكنات التكنيكوم جبايلي","DHD Express — خنشلة: C46P+R55، خنشلة"],"Souk Ahras":["DHD Express — سوق أهراس: 04 طريق الجزائر، مقابل DR KHELIFI","DHD Express — سوق أهراس: 7WPR+QG8، سوق أهراس"],"Ain Temouchent":["DHD Express — عين تموشنت: ترقية عقارية تونسي، إقامة بلير","DHD Express — عين تموشنت: إقامة بلير، عين تموشنت"],"El Oued":["DHD Express — الوادي: حي الرمال، طريق النزل المالي، مقابل بزار يانوفا، بجانب مطعم الحكاية","DHD Express — الوادي: 9R3W+2VC، الوادي"],"Naama":["DHD Express — المشرية: 14 شارع العقيد عميروش، حي خميستي"],"Ghardaia":["DHD Express — غرداية: شارع الشيخ عبد العزيز الثميني، مقابل متوسطة الشيخ 3 بن يزقن","DHD Express — غرداية: FMHV+8GX، غرداية"],"Ouled Djellal":["DHD Express — أولاد جلال: شارع قاسمي إبراهيم، خلف عيادة قاسمي إبراهيم","DHD Express — أولاد جلال: C3H9+HHQ، Gasmi Brahim، أولاد جلال"],"M'Ghair":["DHD Express — المغير: مكتب DHD Express في مدينة المغير","DHD Express — المغير: مدينة المغير"],"Touggourt":["DHD Express — تقرت: مكتب DHD Express في مدينة تقرت","DHD Express — تقرت: 437G+M99، تبسبست"],"Meniaa":["DHD Express — المنيعة: حي 500 مسكن، مقابل مركز التكوين المهني والتمهين رقم 2","DHD Express — المنيعة: HVRG+85F، المنيعة"],"In Salah":["DHD Express — عين صالح: وسط المدينة، شارع الرادار، مقابل سوبرات بن حمادي","DHD Express — عين صالح: 6F2J+6HQ، عين صالح"],"Timimoun":["DHD Express — تيميمون: بجوار المركز الطبي سوناطراك","DHD Express — تيميمون: 765J+RGV، شارع محمد خميستي"],"Béni Abbès":["DHD Express — بني عباس: مكتب DHD Express في مدينة بني عباس"],"Bordj Badji Mokhtar":[],"In Guezzam":[],"Djanet":[]};
@@ -844,6 +887,7 @@ function priceNumber(v){
   else s = s.replace(/[^0-9.]/g,"");
   return Number(s)||0;
 }
+function escHtml(v){return String(v??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));}
 function toast(msg){
   const el=document.getElementById("toast");
   el.textContent=msg; el.classList.add("show");
@@ -1177,65 +1221,257 @@ document.getElementById("checkoutForm").addEventListener("submit", async e=>{
   e.preventDefault();
   if(!cart.length) return;
   const btn=document.getElementById("orderSubmit");
+  if(btn.disabled) return;
   btn.disabled=true; btn.textContent=t("جاري الإرسال...","Envoi...");
   try{
-    const n=document.getElementById("n").value.trim();
-    const p=document.getElementById("p").value.trim();
-    const a=document.getElementById("a").value.trim();
-    const commune=document.getElementById("commune").value.trim();
-    const prov=document.getElementById("c").value;
-    const type=document.getElementById("deliveryType").value;
-    const office=document.getElementById("dhdExpressOffice").value||"";
+    const form=document.getElementById("checkoutForm");
+    const fd=new FormData(form);
+    const n=(document.getElementById("n")?.value||"").trim();
+    const p=(document.getElementById("p")?.value||"").trim();
+    const a=(document.getElementById("a")?.value||"").trim();
+    const commune=(document.getElementById("commune")?.value||"").trim();
+    const prov=document.getElementById("c")?.value||"";
+    const type=document.getElementById("deliveryType")?.value||"";
+    const office=document.getElementById("dhdExpressOffice")?.value||"";
     if(!n||!p||!a||!commune||!prov) throw new Error(t("أكملي معلومات التوصيل","Complétez la livraison"));
-    if(type==="office" && !office) throw new Error(t("اختاري مكتب DHD Express","Choisissez un bureau"));
+    if(type==="office" && !office) throw new Error(t("اختاري مكتب DHD Express","Choisissez un bureau DHD Express"));
     const rates=SHIPPING_RATES[prov];
     if(!rates) throw new Error(t("اختاري الولاية","Choisissez la wilaya"));
     const productsTotal=subtotal();
     const fee=Number(rates[type==="home"?0:1]||0);
     const total=productsTotal+fee;
 
-    const fd=new FormData();
+    // Formspree receives every current/future named field in the checkout form.
     fd.set("الاسم",n); fd.set("رقم الهاتف",p); fd.set("العنوان",a);
     fd.set("الولاية",prov); fd.set("البلدية",commune);
-    fd.set("نوع التوصيل", type==="office"?"مكتب":"منزل");
-    if(office) fd.set("مكتب DHD Express", office);
-    fd.set("المنتجات", cart.map(x=>`${x.name}${x.selectedColor?" (لون: "+colorLabel(x.selectedColor)+")":""}${x.selectedSize?" (مقاس: "+x.selectedSize+")":""} × ${x.qty}`).join("\n"));
-    fd.set("السعر قبل التوصيل", money(productsTotal));
-    fd.set("سعر التوصيل", money(fee));
-    fd.set("الإجمالي", money(total));
+    fd.set("نوع التوصيل",type==="office"?"مكتب DHD Express":"إلى المنزل");
+    fd.set("مكتب DHD Express",office);
+    fd.set("المنتجات",cart.map(x=>{
+      const extra=[x.selectedColor?"لون: "+colorLabel(x.selectedColor):"",x.selectedSize?"مقاس: "+x.selectedSize:""] .filter(Boolean).join(" / ");
+      return `${x.name}${extra?" ("+escHtml(extra)+")":""} × ${x.qty}`;
+    }).join("\n"));
+    fd.set("السعر قبل التوصيل",money(productsTotal));
+    fd.set("سعر التوصيل",money(fee));
+    fd.set("الإجمالي",money(total));
 
-    const res=await fetch(FORMSPREE,{method:"POST",headers:{"Accept":"application/json"},body:fd});
-    if(!res.ok) throw new Error(t("تعذر إرسال الطلب","Échec de l'envoi"));
-
-    // secondary Supabase copy
-    try{
-      const order={
-        customer_name:n, phone:p, wilaya_name:prov, commune,
-        delivery_type:type, office_name:office,
-        products_total:productsTotal, delivery_price:fee, grand_total:total, status:"new"
-      };
-      const items=cart.map(x=>({
-        product_id:x.id||null, product_name:x.name,
-        selected_color:x.selectedColor||null, selected_size:x.selectedSize||null,
-        unit_price:priceNumber(x.price), quantity:x.qty,
+    // First create the order in Supabase. Never report success if this fails.
+    const order={customer_name:n,phone:p,address:a,wilaya_name:prov,commune,
+      delivery_type:type,office_name:office,products_total:productsTotal,
+      delivery_price:fee,grand_total:total,status:"new"};
+    const items=cart.map(x=>{
+      const colorKey=x.selectedColor||"";
+      const colorHex=(colorKey && byKey[colorKey]) ? byKey[colorKey].hex : "";
+      const size=x.selectedSize||"";
+      // Keep the real product name intact while embedding a private fallback marker.
+      // This survives RPCs that do not map selected_color/selected_size columns.
+      const variantMarker=(colorKey||size)
+        ? `\n[QS_VARIANT_COLOR:${colorKey}|${colorHex}][QS_VARIANT_SIZE:${size}]`
+        : "";
+      return {
+        product_id:x.id||null,
+        product_name:String(x.name||"")+variantMarker,
+        selected_color:colorKey||null,
+        selected_size:size||null,
+        product_image:x.image||x.image_url||x.product_image||null,
+        unit_price:priceNumber(x.price),
+        quantity:x.qty,
         total_price:priceNumber(x.price)*x.qty
-      }));
-      await fetch(SUPABASE_URL+"/rest/v1/rpc/submit_public_order",{
-        method:"POST", headers:apiHeaders(""),
-        body:JSON.stringify({p_order:order,p_items:items})
+      };
+    });
+
+    let saved=false, lastDbError="";
+    try{
+      const r=await fetch(SUPABASE_URL+"/rest/v1/rpc/submit_public_order",{
+        method:"POST",headers:apiHeaders(""),body:JSON.stringify({p_order:order,p_items:items})
       });
-    }catch(err){ console.warn("supabase order",err); }
+      if(r.ok) saved=true; else lastDbError=await r.text();
+    }catch(err){ lastDbError=err.message||String(err); }
+
+    // Fallback when the RPC is unavailable: insert order, then items.
+    if(!saved){
+      const r=await fetch(ORDERS_URL,{method:"POST",headers:{...apiHeaders(""),"Prefer":"return=representation"},body:JSON.stringify(order)});
+      const d=await r.json().catch(()=>null);
+      if(!r.ok || !Array.isArray(d) || !d[0]?.id) throw new Error(t("تعذر حفظ الطلب في قاعدة البيانات. ","Impossible d'enregistrer la commande. ")+lastDbError);
+      const orderId=d[0].id;
+      const itemRows=items.map(it=>({...it,order_id:orderId}));
+      const ir=await fetch(ITEMS_URL,{method:"POST",headers:{...apiHeaders(""),"Prefer":"return=minimal"},body:JSON.stringify(itemRows)});
+      if(!ir.ok) throw new Error(t("تم إنشاء الطلب لكن تعذر حفظ تفاصيل المنتجات: ","Commande créée mais détails produits non enregistrés: ")+await ir.text());
+      saved=true;
+    }
+
+    if(!saved) throw new Error(t("تعذر حفظ الطلب","Impossible d'enregistrer la commande"));
+
+    // Notify Formspree after database persistence. Failure is reported separately.
+    const res=await fetch(FORMSPREE,{method:"POST",headers:{"Accept":"application/json"},body:fd});
+    if(!res.ok) console.warn("Formspree notification failed",await res.text().catch(()=>""));
 
     cart=[]; saveCart(); renderCart(); updateCartUI();
-    document.getElementById("checkoutForm").reset();
-    closeCart();
-    alert(t("تم إرسال طلبك بنجاح ✓","Commande envoyée ✓"));
+    form.reset(); updateTotals(); updateOffices(); closeCart();
+    alert(t("تم حفظ وإرسال طلبك بنجاح ✓","Commande enregistrée avec succès ✓"));
   }catch(err){
-    alert(err.message||t("حدث خطأ","Erreur"));
+    console.error("checkout",err);
+    alert(err.message||t("حدث خطأ أثناء إرسال الطلب","Une erreur est survenue"));
   }finally{
     btn.disabled=false; btn.textContent=t("إتمام الطلب","Commander");
   }
 });
+
+
+function escapeOrderText(value){
+  return String(value ?? "").replace(/[&<>"']/g, ch => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[ch]));
+}
+
+function getOrderItemImage(item){
+  if(!item) return "";
+  return item.image_url || item.image || item.product_image || item.productImage ||
+         item.imageUrl || item.thumbnail || item.photo || item.product?.image_url ||
+         item.product?.image || "";
+}
+
+
+function parseOrderVariantFallback(item){
+  const raw=String(item?.product_name||item?.productName||item?.name||"");
+  const cm=raw.match(/\[QS_VARIANT_COLOR:([^|\]]*)\|([^\]]*)\]/i);
+  const sm=raw.match(/\[QS_VARIANT_SIZE:([^\]]*)\]/i);
+  const clean=raw.replace(/\[QS_VARIANT_COLOR:[^\]]*\]/gi,"")
+                 .replace(/\[QS_VARIANT_SIZE:[^\]]*\]/gi,"")
+                 .trim();
+  return {
+    cleanName:clean || "منتج",
+    colorKey:cm?.[1]||"",
+    colorHex:cm?.[2]||"",
+    size:sm?.[1]||""
+  };
+}
+
+function getOrderVariant(item){
+  const f=parseOrderVariantFallback(item);
+  return {
+    name:f.cleanName,
+    color:item.selected_color??item.selectedColor??item.color??item.color_name??f.colorKey??"",
+    colorHex:item.selected_color_hex??item.selectedColorHex??item.color_hex??f.colorHex??"",
+    size:item.selected_size??item.selectedSize??item.size??item.size_name??f.size??""
+  };
+}
+
+function colorSwatchHtml(key, hex, label){
+  const safeHex=/^#[0-9a-f]{6}$/i.test(String(hex||"")) ? hex : (byKey[key]?.hex||"");
+  if(!safeHex) return `<span class="admin-color-missing">غير محفوظ</span>`;
+  const title=escapeOrderText(label||colorLabel(key));
+  return `<span class="admin-color-swatch" title="${title}" aria-label="${title}" style="background:${safeHex}"></span>`;
+}
+
+function renderOrderProductImages(order){
+  const items = order?.items || order?.order_items || order?.orderItems || [];
+  if(!items.length) return "";
+
+  const normalize = value => {
+    if(value === null || value === undefined) return "";
+    if(typeof value === "object"){
+      return value.name || value.label || value.value || value.title || JSON.stringify(value);
+    }
+    return String(value);
+  };
+
+  return `<div class="order-products-with-images">
+    ${items.map((item, index) => {
+      const image = getOrderItemImage(item);
+      const name = item.product_name || item.productName || item.name ||
+                   item.product?.name || item.products?.name || "منتج";
+      const qty = item.quantity ?? item.qty ?? item.count ?? 1;
+
+      const color = normalize(
+        item.selected_color ?? item.selectedColor ?? item.color ??
+        item.color_name ?? item.colorName ?? item.variant_color ??
+        item.variant?.color ?? item.options?.color
+      );
+
+      const size = normalize(
+        item.selected_size ?? item.selectedSize ?? item.size ??
+        item.size_name ?? item.sizeName ?? item.variant_size ??
+        item.variant?.size ?? item.options?.size
+      );
+
+      const variantParts = [
+        `الكمية: ${escapeOrderText(qty)}`,
+        color ? `اللون: ${escapeOrderText(color)}` : "",
+        size ? `المقاس: ${escapeOrderText(size)}` : ""
+      ].filter(Boolean);
+
+      const meta = variantParts.join(" · ");
+
+      if(image){
+        return `<div class="order-product-row">
+          <img class="order-product-thumb"
+               src="${escapeOrderText(image)}"
+               alt="${escapeOrderText(name)}"
+               data-order-image="${escapeOrderText(image)}"
+               loading="lazy"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='grid';">
+          <div class="order-image-empty" style="display:none">لا توجد صورة</div>
+          <div class="order-product-info">
+            <strong>${escapeOrderText(name)}</strong>
+            <small>${meta}</small>
+          </div>
+        </div>`;
+      }
+
+      return `<div class="order-product-row">
+        <div class="order-image-empty">لا توجد صورة</div>
+        <div class="order-product-info">
+          <strong>${escapeOrderText(name)}</strong>
+          <small>${meta}</small>
+        </div>
+      </div>`;
+    }).join("")}
+  </div>`;
+}
+
+function initOrderImageViewer(){
+  const viewer = document.getElementById("orderImageViewer");
+  const img = document.getElementById("orderImageViewerImg");
+  const close = document.getElementById("orderImageViewerClose");
+  if(!viewer || !img || !close) return;
+
+  const open = (src, alt) => {
+    if(!src) return;
+    img.src = src;
+    img.alt = alt || "صورة المنتج";
+    viewer.classList.add("is-open");
+    viewer.setAttribute("aria-hidden","false");
+    document.body.style.overflow = "hidden";
+  };
+
+  const shut = () => {
+    viewer.classList.remove("is-open");
+    viewer.setAttribute("aria-hidden","true");
+    img.src = "";
+    document.body.style.overflow = "";
+  };
+
+  document.addEventListener("click", e=>{
+    const thumb = e.target.closest("[data-order-image]");
+    if(thumb){
+      e.preventDefault();
+      e.stopPropagation();
+      open(thumb.getAttribute("data-order-image"), thumb.alt);
+      return;
+    }
+    if(e.target === viewer) shut();
+  });
+
+  close.addEventListener("click", e=>{
+    e.preventDefault();
+    e.stopPropagation();
+    shut();
+  });
+
+  document.addEventListener("keydown", e=>{
+    if(e.key === "Escape" && viewer.classList.contains("is-open")) shut();
+  });
+}
 
 /* Admin Room */
 const ORDERS_URL = SUPABASE_URL + "/rest/v1/orders";
@@ -1336,35 +1572,79 @@ const STATUS_AR = {
 async function loadAdminOrders(){
   const host = document.getElementById("ordersList");
   if(host) host.innerHTML = '<p class="admin-muted">جاري تحميل الطلبات...</p>';
+
   try{
-    const r = await fetch(ORDERS_URL+"?select=*&order=created_at.desc&limit=200",{
+    const r=await fetch(ORDERS_URL+"?select=*&order=created_at.desc&limit=200",{
       headers:apiHeaders()
     });
-    const data = await r.json();
-    if(!r.ok) throw new Error(typeof data==="string"?data:(data.message||"تعذر جلب الطلبات"));
-    ADMIN_ORDERS = Array.isArray(data) ? data : [];
-    // try load items
+    const data=await r.json().catch(()=>null);
+    if(!r.ok) throw new Error(typeof data==="string"?data:(data?.message||"فشل جلب الطلبات"));
+    ADMIN_ORDERS=Array.isArray(data)?data:[];
+
+    // Load order items.
+    ADMIN_ORDER_ITEMS={};
     try{
-      const ir = await fetch(ITEMS_URL+"?select=*&order=id.asc&limit=2000",{headers:apiHeaders()});
-      const items = await ir.json();
-      ADMIN_ORDER_ITEMS = {};
+      const ir=await fetch(ITEMS_URL+"?select=*&order=id.asc&limit=2000",{
+        headers:apiHeaders()
+      });
+      const items=await ir.json().catch(()=>[]);
       if(Array.isArray(items)){
         items.forEach(it=>{
-          const oid = it.order_id;
+          const oid=it.order_id;
           if(!ADMIN_ORDER_ITEMS[oid]) ADMIN_ORDER_ITEMS[oid]=[];
           ADMIN_ORDER_ITEMS[oid].push(it);
         });
       }
-    }catch(_){}
+    }catch(err){
+      console.warn("order_items",err);
+    }
+
+    // Load product metadata by product_id. This repairs images for older orders
+    // where product_image was not saved in order_items.
+    ADMIN_PRODUCTS={};
+    try{
+      const ids=[...new Set(
+        Object.values(ADMIN_ORDER_ITEMS).flat().map(it=>it.product_id).filter(Boolean)
+      )];
+
+      if(ids.length){
+        const inList=ids.map(id=>`"${String(id).replace(/"/g,'\\\"')}"`).join(",");
+        const pr=await fetch(TABLE_URL+"?select=id,name,image_paths,image_url,available_colors,sizes&id=in.("+encodeURIComponent(inList)+")&limit=500",{
+          headers:apiHeaders(""),
+          cache:"no-store"
+        });
+        const products=await pr.json().catch(()=>[]);
+        if(Array.isArray(products)){
+          products.forEach(p=>ADMIN_PRODUCTS[String(p.id)]=p);
+        }
+      }
+    }catch(err){
+      console.warn("admin product metadata",err);
+    }
+
+    // Merge product metadata into each order item without changing the DB data.
+    Object.values(ADMIN_ORDER_ITEMS).forEach(items=>{
+      items.forEach(it=>{
+        const p=ADMIN_PRODUCTS[String(it.product_id)];
+        if(!p) return;
+        it._product=p;
+        if(!it.product_image && !it.image_url && !it.image){
+          const paths=Array.isArray(p.image_paths)&&p.image_paths.length
+            ? p.image_paths
+            : (p.image_url?[p.image_url]:[]);
+          it._admin_image=paths.map(imageUrl).filter(Boolean)[0]||"";
+        }
+      });
+    });
+
     renderOrdersList();
     updateDashboard();
   }catch(e){
     console.warn(e);
-    if(host) host.innerHTML = '<p class="admin-muted">'+ (e.message||"لا يمكن تحميل الطلبات. تأكدي من جدول orders وصلاحيات RLS.") +'</p>';
+    if(host) host.innerHTML='<p class="admin-muted">'+escHtml(e.message||"لا يمكن تحميل الطلبات. تأكدي من جدول orders وصلاحيات RLS.")+'</p>';
     updateDashboard();
   }
 }
-
 function filteredOrders(){
   const q = (document.getElementById("orderSearch")?.value||"").trim().toLowerCase();
   const st = document.getElementById("orderStatusFilter")?.value||"";
@@ -1389,22 +1669,46 @@ function renderOrdersList(){
     const st = o.status || "new";
     const items = ADMIN_ORDER_ITEMS[o.id] || [];
     const itemsHtml = items.length
-      ? items.map(it=>{
-          const extra = [it.selected_color, it.selected_size].filter(Boolean).join(" / ");
-          return `<div>• ${it.product_name||"منتج"}${extra?" ("+extra+")":""} × ${it.quantity||1} — ${money(it.total_price||0)}</div>`;
-        }).join("")
+      ? `<div class="admin-order-products">${items.map(it=>{
+          const variant=getOrderVariant(it);
+          const name=variant.name;
+          const qty=it.quantity??it.qty??1;
+          const image=it.product_image||it.image_url||it.image||it.productImage||it._admin_image||"";
+          const total=it.total_price??(Number(it.unit_price||it.price||0)*Number(qty));
+          const colorKey=String(variant.color||"");
+          const colorHex=variant.colorHex||byKey[colorKey]?.hex||"";
+          const colorLabelText=colorKey ? colorLabel(colorKey) : "";
+          return `<div class="admin-order-product">
+            ${image
+              ? `<img class="admin-order-product-img" src="${escHtml(image)}" alt="${escHtml(name)}" data-order-image="${escHtml(image)}" loading="lazy">`
+              : `<div class="admin-order-product-img no-img">لا توجد صورة</div>`}
+            <div class="admin-order-product-data">
+              <strong>${escHtml(name)}</strong>
+              <div class="admin-order-variants">
+                <span>📦 الكمية: <b>${escHtml(qty)}</b></span>
+                ${colorKey
+                  ? `<span class="admin-color-choice">🎨 ${colorSwatchHtml(colorKey,colorHex,colorLabelText)}</span>`
+                  : `<span class="variant-missing">🎨 اللون: <b>غير محفوظ في هذا الطلب</b></span>`}
+                ${variant.size
+                  ? `<span>📏 المقاس: <b>${escHtml(variant.size)}</b></span>`
+                  : `<span class="variant-missing">📏 المقاس: <b>غير محفوظ في هذا الطلب</b></span>`}
+              </div>
+              <div class="admin-order-product-price">${money(total)}</div>
+            </div>
+          </div>`;
+        }).join("")}</div>`
       : '<div class="admin-muted">لا توجد تفاصيل عناصر محفوظة</div>';
     const card = document.createElement("div");
     card.className = "order-card";
     card.innerHTML = `
       <div class="order-head">
-        <strong>${o.customer_name||"—"}</strong>
+        <strong>${escHtml(o.customer_name||"—")}</strong>
         <span class="order-status s-${st}">${STATUS_AR[st]||st}</span>
       </div>
       <div class="order-meta">
-        📞 ${o.phone||"—"}<br>
-        📍 ${o.wilaya_name||"—"} — ${o.commune||"—"}<br>
-        🚚 ${o.delivery_type==="office"?"مكتب DHD Express":"إلى المنزل"}${o.office_name?" — "+o.office_name:""}<br>
+        📞 ${escHtml(o.phone||"—")}<br>
+        📍 ${escHtml(o.wilaya_name||"—")} — ${escHtml(o.commune||"—")}<br>🏠 ${escHtml(o.address||"—")}<br>
+        🚚 ${o.delivery_type==="office"?"مكتب DHD Express":"إلى المنزل"}${o.office_name?" — "+escHtml(o.office_name):""}<br>
         🕒 ${o.created_at ? new Date(o.created_at).toLocaleString("ar-DZ") : "—"}
       </div>
       <div class="order-items">${itemsHtml}</div>
@@ -1418,6 +1722,7 @@ function renderOrdersList(){
           <option value="cancelled" ${st==="cancelled"?"selected":""}>ملغى</option>
         </select>
         <button type="button" data-save>تحديث الحالة</button>
+        <button type="button" class="danger" data-delete>🗑 حذف الطلب</button>
       </div>`;
     card.querySelector("[data-save]").onclick = async ()=>{
       const status = card.querySelector("[data-status]").value;
@@ -1433,6 +1738,49 @@ function renderOrdersList(){
         updateDashboard();
         toast("تم تحديث الحالة ✓");
       }catch(e){ alert(e.message||"فشل التحديث"); }
+    };
+
+    card.querySelector("[data-delete]").onclick = async ()=>{
+      if(!confirm("تحذير: سيتم حذف الطلب نهائياً من Supabase ولا يمكن التراجع عن ذلك.")) return;
+
+      const email = prompt("للتأكيد، أدخلي بريد الإدارة:");
+      if(email === null) return;
+      const password = prompt("أدخلي كلمة مرور الإدارة لتأكيد الحذف:");
+      if(password === null) return;
+      if(!email.trim() || !password) return alert("يجب إدخال البريد وكلمة المرور.");
+
+      try{
+        // Re-authenticate before destructive action.
+        const auth = await fetch(SUPABASE_URL+"/auth/v1/token?grant_type=password",{
+          method:"POST",
+          headers:apiHeaders(""),
+          body:JSON.stringify({email:email.trim(), password})
+        });
+        const authData = await auth.json().catch(()=>({}));
+        if(!auth.ok) throw new Error(authData.error_description||authData.msg||"بيانات التأكيد غير صحيحة.");
+
+        const token = authData.access_token;
+        const delHeaders = {...apiHeaders(token),"Prefer":"return=minimal"};
+
+        // Delete children first so the order can be removed even when order_items has no ON DELETE CASCADE.
+        const di = await fetch(ITEMS_URL+"?order_id=eq."+encodeURIComponent(o.id),{
+          method:"DELETE", headers:delHeaders
+        });
+        if(!di.ok) throw new Error("تعذر حذف عناصر الطلب: "+await di.text());
+
+        const d = await fetch(ORDERS_URL+"?id=eq."+encodeURIComponent(o.id),{
+          method:"DELETE", headers:delHeaders
+        });
+        if(!d.ok) throw new Error("تعذر حذف الطلب: "+await d.text());
+
+        ADMIN_ORDERS = ADMIN_ORDERS.filter(x=>x.id!==o.id);
+        delete ADMIN_ORDER_ITEMS[o.id];
+        renderOrdersList();
+        updateDashboard();
+        toast("تم حذف الطلب نهائياً ✓");
+      }catch(e){
+        alert(e.message||"فشل حذف الطلب");
+      }
     };
     host.appendChild(card);
   });
@@ -1454,7 +1802,7 @@ function updateDashboard(){
   if(recent){
     const top = orders.slice(0,5);
     if(!top.length) recent.innerHTML = '<span class="admin-muted">لا توجد طلبات بعد</span>';
-    else recent.innerHTML = top.map(o=>`<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)"><strong style="color:#fff">${o.customer_name||"—"}</strong> — ${money(o.grand_total)} <span class="order-status s-${o.status||"new"}" style="margin-right:6px">${STATUS_AR[o.status||"new"]}</span></div>`).join("");
+    else recent.innerHTML = top.map(o=>`<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)"><strong style="color:#fff">${escHtml(o.customer_name||"—")}</strong> — ${money(o.grand_total)} <span class="order-status s-${o.status||"new"}" style="margin-right:6px">${STATUS_AR[o.status||"new"]}</span></div>`).join("");
   }
 }
 
@@ -1537,7 +1885,7 @@ async function refreshAdminList(){
       const el=document.createElement("div"); el.className="admin-item";
       el.innerHTML=`
         <img src="${imageUrl(paths[0]||"")}" alt="">
-        <div><strong>${row.name||""}</strong><span>${money(row.price)}</span></div>
+        <div><strong>${escHtml(row.name||"")}</strong><span>${money(row.price)}</span></div>
         <div style="display:flex;flex-direction:column;gap:4px">
           <button type="button" class="chip" data-e>تعديل</button>
           <button type="button" class="chip" data-d>حذف</button>
@@ -1672,26 +2020,15 @@ loadProducts();
 if(lang==="fr") document.getElementById("langBtn").click();
 </script>
 
-<section class="section dhd-directory" id="dhdDirectory">
-  <div class="section-head">
-    <div>
-      <h2>شبكة مكاتب DHD Express</h2>
-      <span>إحصاء جميع الولايات حسب قائمة المكاتب الموجودة في المتجر</span>
-    </div>
-  </div>
-  <div class="dhd-summary">
-    <div><b>139</b><span>إجمالي نقاط/مكاتب DHD المسجلة</span></div>
-    <div><b>58</b><span>ولاية</span></div>
-    <div><b>55</b><span>ولايات بها مكاتب</span></div>
-  </div>
-  <div class="dhd-table-wrap">
-    <table class="dhd-table">
-      <thead><tr><th>#</th><th>الولاية</th><th>العدد</th><th>الحالة</th></tr></thead>
-      <tbody><tr><td>01</td><td><b>أدرار</b><small>Adrar</small></td><td><span class="dhd-count">1</span></td><td>1 مكتب</td></tr><tr><td>02</td><td><b>الشلف</b><small>Chlef</small></td><td><span class="dhd-count">4</span></td><td>4 مكاتب</td></tr><tr><td>03</td><td><b>الأغواط</b><small>Laghouat</small></td><td><span class="dhd-count">1</span></td><td>1 مكتب</td></tr><tr><td>04</td><td><b>أم البواقي</b><small>Oum El Bouaghi</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>05</td><td><b>باتنة</b><small>Batna</small></td><td><span class="dhd-count">4</span></td><td>4 مكاتب</td></tr><tr><td>06</td><td><b>بجاية</b><small>Bejaia</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>07</td><td><b>بسكرة</b><small>Biskra</small></td><td><span class="dhd-count">1</span></td><td>1 مكتب</td></tr><tr><td>08</td><td><b>بشار</b><small>Bechar</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>09</td><td><b>البليدة</b><small>Blida</small></td><td><span class="dhd-count">7</span></td><td>7 مكاتب</td></tr><tr><td>10</td><td><b>البويرة</b><small>Bouira</small></td><td><span class="dhd-count">1</span></td><td>1 مكتب</td></tr><tr><td>11</td><td><b>تمنراست</b><small>Tamanrasset</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>12</td><td><b>تبسة</b><small>Tebessa</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>13</td><td><b>تلمسان</b><small>Tlemcen</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>14</td><td><b>تيارت</b><small>Tiaret</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>15</td><td><b>تيزي وزو</b><small>Tizi Ouzou</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>16</td><td><b>الجزائر العاصمة</b><small>Alger</small></td><td><span class="dhd-count">10</span></td><td>10 مكاتب</td></tr><tr><td>17</td><td><b>الجلفة</b><small>Djelfa</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>18</td><td><b>جيجل</b><small>Jijel</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>19</td><td><b>سطيف</b><small>Sétif</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>20</td><td><b>سعيدة</b><small>Saida</small></td><td><span class="dhd-count">1</span></td><td>1 مكتب</td></tr><tr><td>21</td><td><b>سكيكدة</b><small>Skikda</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>22</td><td><b>سيدي بلعباس</b><small>Sidi Bel Abbès</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>23</td><td><b>عنابة</b><small>Annaba</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>24</td><td><b>قالمة</b><small>Guelma</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>25</td><td><b>قسنطينة</b><small>Constantine</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>26</td><td><b>المدية</b><small>Medea</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>27</td><td><b>مستغانم</b><small>Mostaganem</small></td><td><span class="dhd-count">4</span></td><td>4 مكاتب</td></tr><tr><td>28</td><td><b>المسيلة</b><small>M&#x27;Sila</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>29</td><td><b>معسكر</b><small>Mascara</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>30</td><td><b>ورقلة</b><small>Ouargla</small></td><td><span class="dhd-count">3</span></td><td>3 مكاتب</td></tr><tr><td>31</td><td><b>وهران</b><small>Oran</small></td><td><span class="dhd-count">6</span></td><td>6 مكاتب</td></tr><tr><td>32</td><td><b>البيض</b><small>El Bayadh</small></td><td><span class="dhd-count">1</span></td><td>1 مكتب</td></tr><tr><td>33</td><td><b>إليزي</b><small>Illizi</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>34</td><td><b>برج بوعريريج</b><small>Bordj Bou Arreridj</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>35</td><td><b>بومرداس</b><small>Boumerdes</small></td><td><span class="dhd-count">4</span></td><td>4 مكاتب</td></tr><tr><td>36</td><td><b>الطارف</b><small>El Tarf</small></td><td><span class="dhd-count">1</span></td><td>1 مكتب</td></tr><tr><td>37</td><td><b>تندوف</b><small>Tindouf</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>38</td><td><b>تيبازة</b><small>Tipaza</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>39</td><td><b>عين الدفلى</b><small>Ain Defla</small></td><td><span class="dhd-count">4</span></td><td>4 مكاتب</td></tr><tr><td>40</td><td><b>تيسمسيلت</b><small>Tissemsilt</small></td><td><span class="dhd-count">1</span></td><td>1 مكتب</td></tr><tr><td>41</td><td><b>ميلة</b><small>Mila</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>42</td><td><b>غليزان</b><small>Relizane</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>43</td><td><b>خنشلة</b><small>Khenchela</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>44</td><td><b>سوق أهراس</b><small>Souk Ahras</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>45</td><td><b>عين تموشنت</b><small>Ain Temouchent</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>46</td><td><b>الوادي</b><small>El Oued</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>47</td><td><b>النعامة</b><small>Naama</small></td><td><span class="dhd-count">1</span></td><td>1 مكتب</td></tr><tr><td>48</td><td><b>غرداية</b><small>Ghardaia</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>49</td><td><b>أولاد جلال</b><small>Ouled Djellal</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>50</td><td><b>المغير</b><small>M&#x27;Ghair</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>51</td><td><b>تقرت</b><small>Touggourt</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>52</td><td><b>المنيعة</b><small>Meniaa</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>53</td><td><b>عين صالح</b><small>In Salah</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>54</td><td><b>تيميمون</b><small>Timimoun</small></td><td><span class="dhd-count">2</span></td><td>2 مكاتب</td></tr><tr><td>55</td><td><b>بني عباس</b><small>Béni Abbès</small></td><td><span class="dhd-count">1</span></td><td>1 مكتب</td></tr><tr><td>56</td><td><b>برج باجي مختار</b><small>Bordj Badji Mokhtar</small></td><td><span class="dhd-count zero">0</span></td><td>لا يوجد مكتب مسجل</td></tr><tr><td>57</td><td><b>إن قزام</b><small>In Guezzam</small></td><td><span class="dhd-count zero">0</span></td><td>لا يوجد مكتب مسجل</td></tr><tr><td>58</td><td><b>جانت</b><small>Djanet</small></td><td><span class="dhd-count zero">0</span></td><td>لا يوجد مكتب مسجل</td></tr></tbody>
-    </table>
-  </div>
-  <p class="dhd-note">ملاحظة: العدد هنا محسوب من عناصر <code>DHD_EXPRESS_OFFICES</code> الموجودة داخل هذا الملف، لذلك فهو يعكس القائمة المضافة للموقع وليس ادعاءً بمعلومة خارجية عن الشبكة.</p>
-</section>
+<div id="orderImageViewer" class="order-image-viewer" aria-hidden="true" role="dialog" aria-label="عرض صورة المنتج">
+  <button type="button" id="orderImageViewerClose" aria-label="إغلاق">×</button>
+  <img id="orderImageViewerImg" src="" alt="صورة المنتج">
+</div>
+
+
+<script id="order-image-viewer-init">
+document.addEventListener("DOMContentLoaded", ()=>{ initOrderImageViewer(); });
+</script>
 
 </body>
 </html>
