@@ -891,7 +891,7 @@ const SUPABASE_URL = "https://kxirfxiyxhcecxfspife.supabase.co";
 const SUPABASE_KEY = "sb_publishable_lQuTHGyYkSp-5Zl6dWea4Q_RFA8nR28";
 const TABLE_URL = SUPABASE_URL + "/rest/v1/products";
 const BUCKET = "product-images";
-const FORMSPREE = "https://formspree.io/f/mbgjlqrr";
+const FORMSPREE_ENDPOINTS = ["https://formspree.io/f/mbgjlqrr", "https://formspree.io/f/xppzdaaz"];
 const SIZES = ["S","M","L","XL","2XL","3XL","4XL"];
 // لوحة ألوان موسعة للملابس والأقمشة، وتشمل اللون العنابي الظاهر في الصورة.
 const COLOR_PALETTE = [
@@ -1417,9 +1417,18 @@ document.getElementById("checkoutForm").addEventListener("submit", async e=>{
 
     if(!saved) throw new Error(t("تعذر حفظ الطلب","Impossible d'enregistrer la commande"));
 
-    // Notify Formspree after database persistence. Failure is reported separately.
-    const res=await fetch(FORMSPREE,{method:"POST",headers:{"Accept":"application/json"},body:fd});
-    if(!res.ok) console.warn("Formspree notification failed",await res.text().catch(()=>""));
+    // Notify both Formspree endpoints after database persistence. A notification failure never closes the site or cancels the saved order.
+    const notificationResults = await Promise.allSettled(
+      FORMSPREE_ENDPOINTS.map(endpoint => {
+        const payload=new FormData();
+        fd.forEach((value,key)=>payload.append(key,value));
+        return fetch(endpoint,{method:"POST",headers:{"Accept":"application/json"},body:payload});
+      })
+    );
+    notificationResults.forEach((result,index)=>{
+      if(result.status==="rejected") console.warn("Formspree notification failed",FORMSPREE_ENDPOINTS[index],result.reason);
+      else if(!result.value.ok) console.warn("Formspree notification failed",FORMSPREE_ENDPOINTS[index],result.value.status);
+    });
 
     cart=[]; saveCart(); renderCart(); updateCartUI();
     form.reset(); updateTotals(); updateOffices(); closeCart();
