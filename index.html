@@ -638,6 +638,11 @@ body.admin-open .bottom-bar{display:none!important}
 }
 </style>
 
+
+<style id="whatsapp-modal-hide-fix">
+.whatsapp-float.whatsapp-hidden-for-overlay{display:none !important;}
+</style>
+
 </head>
 <body>
 
@@ -2261,6 +2266,38 @@ document.addEventListener("DOMContentLoaded", ()=>{ initOrderImageViewer(); });
   wa.addEventListener("click",function(e){
     if(!e.isTrusted) e.preventDefault();
   });
+})();
+</script>
+
+
+<script id="whatsapp-modal-visibility-fix">
+(function(){
+  const wa = document.getElementById('whatsappContact');
+  const detail = document.getElementById('detailOverlay');
+  const cart = document.getElementById('cartOverlay');
+  if(!wa || !detail || !cart) return;
+
+  function syncWhatsApp(){
+    const detailOpen = detail.classList.contains('show') || detail.classList.contains('open') || detail.getAttribute('aria-hidden') === 'false';
+    const cartOpen = cart.classList.contains('show') || cart.classList.contains('open') || cart.getAttribute('aria-hidden') === 'false';
+    // Fallback for overlays that are shown via inline style/computed visibility.
+    const visible = (el) => {
+      const cs = getComputedStyle(el);
+      return cs.display !== 'none' && cs.visibility !== 'hidden' && cs.opacity !== '0' && el.offsetParent !== null;
+    };
+    wa.classList.toggle('whatsapp-hidden-for-overlay', detailOpen || cartOpen || visible(detail) || visible(cart));
+  }
+
+  // Watch class/style changes so WhatsApp disappears immediately when cart/product opens
+  // and returns automatically after closing.
+  [detail, cart].forEach(el => {
+    new MutationObserver(syncWhatsApp).observe(el, {attributes:true, attributeFilter:['class','style','aria-hidden']});
+  });
+  ['detailClose','cartClose','cartOpen','barOpen'].forEach(id=>{
+    const b=document.getElementById(id); if(b) b.addEventListener('click',()=>setTimeout(syncWhatsApp,0));
+  });
+  document.addEventListener('click',()=>setTimeout(syncWhatsApp,0), true);
+  syncWhatsApp();
 })();
 </script>
 
