@@ -487,7 +487,17 @@ a{color:inherit;text-decoration:none}
   background:#2a2f38;color:#eee;font-size:.75rem;font-weight:700;cursor:pointer;
 }
 
-.palette{display:flex;flex-wrap:wrap;gap:8px}
+.order-bulk-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:-2px 0 12px}
+.order-bulk-toolbar button{padding:9px 11px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:#2a2f38;color:#eee;font-size:.75rem;font-weight:800;cursor:pointer}
+.order-bulk-toolbar .bulk-danger{background:#5a1f28;border-color:rgba(255,110,130,.35)}
+.order-bulk-toolbar .bulk-danger:disabled{opacity:.45;cursor:not-allowed}
+.order-select-label{display:flex;align-items:center;gap:6px;color:#c8cdd6;font-size:.75rem;font-weight:700;cursor:pointer}
+.order-select-label input{width:18px;height:18px;accent-color:var(--gold);cursor:pointer}
+.order-card.is-selected{outline:2px solid rgba(185,146,59,.7);box-shadow:0 0 0 4px rgba(185,146,59,.08)}
+
+.palette{display:flex;flex-wrap:wrap;gap:8px;max-height:360px;overflow:auto;padding:2px 3px 8px}
+.palette::-webkit-scrollbar{width:8px;height:8px}
+.palette::-webkit-scrollbar-thumb{background:rgba(185,146,59,.45);border-radius:999px}
 .palette label{
   width:34px;height:34px;border-radius:50%;cursor:pointer;
   border:2px solid rgba(255,255,255,.15);position:relative;
@@ -768,6 +778,12 @@ body.admin-open .bottom-bar{display:none!important}
           </select>
           <button type="button" class="sec" id="ordersReload" style="padding:10px 14px;border-radius:12px;border:0;background:#2a2f38;color:#eee;font-weight:800;cursor:pointer">تحديث</button>
         </div>
+        <div class="order-bulk-toolbar">
+          <label class="order-select-label"><input id="ordersSelectAll" type="checkbox"> تحديد كل الطلبات الظاهرة</label>
+          <span class="admin-muted" id="ordersSelectedCount">لم يتم تحديد أي طلب</span>
+          <button type="button" class="bulk-danger" id="ordersBulkDelete" disabled>🗑 حذف المحدد</button>
+          <button type="button" id="ordersClearSelection">إلغاء التحديد</button>
+        </div>
         <div id="ordersList" class="admin-list"><p class="admin-muted">جاري تحميل الطلبات...</p></div>
       </section>
 
@@ -782,7 +798,7 @@ body.admin-open .bottom-bar{display:none!important}
             <div class="field"><label>الوصف</label><textarea id="productDesc" rows="3"></textarea></div>
             <div class="field"><label>السعر (دج)</label><input id="productPrice" type="number" min="0" step="1" required></div>
             <div class="field"><label>الصور</label><input id="productImages" type="file" accept="image/*" multiple></div>
-            <div class="field"><label>الألوان المتوفرة</label><div class="palette" id="productColorPalette"></div></div>
+            <div class="field"><label>الألوان المتوفرة وتدرجات كل لون</label><div class="palette" id="productColorPalette"></div></div>
             <div class="field"><label>المقاسات</label><div class="size-palette" id="productSizePalette"></div></div>
             <div class="admin-actions">
               <button class="pri" type="submit" id="saveProduct">حفظ</button>
@@ -839,24 +855,86 @@ const TABLE_URL = SUPABASE_URL + "/rest/v1/products";
 const BUCKET = "product-images";
 const FORMSPREE = "https://formspree.io/f/mbgjlqrr";
 const SIZES = ["S","M","L","XL","2XL","3XL","4XL"];
+// لوحة ألوان موسعة للملابس والأقمشة، وتشمل اللون العنابي الظاهر في الصورة.
 const COLOR_PALETTE = [
-  ["black","#0A0A0A","أسود","Noir"],["white","#FFFFFF","أبيض","Blanc"],
-  ["gray","#9E9E9E","رمادي","Gris"],["silver","#C0C0C0","فضي","Argent"],
-  ["navy","#0B1F3A","كحلي","Bleu marine"],["blue","#1565C0","أزرق","Bleu"],
-  ["sky","#5BC0EB","سماوي","Bleu ciel"],["beige","#D9C2A3","بيج","Beige"],
-  ["cream","#FFF4D6","كريمي","Crème"],["brown","#6F4E37","بني","Marron"],
-  ["gold","#D4AF37","ذهبي","Doré"],["green","#2E7D32","أخضر","Vert"],
-  ["olive","#6B7A1E","زيتي","Olive"],["red","#C62828","أحمر","Rouge"],
-  ["pink","#EC407A","وردي","Rose"],
-  ["purple","#7B1FA2","بنفسجي","Violet"],
+  ["black","#0A0A0A","أسود","Noir"],["charcoal","#36454F","فحمي","Anthracite"],
+  ["white","#FFFFFF","أبيض","Blanc"],["ivory","#FFFFF0","عاجي","Ivoire"],
+  ["off-white","#F5F1E8","أوف وايت","Blanc cassé"],["gray-light","#D3D3D3","رمادي فاتح","Gris clair"],
+  ["gray","#9E9E9E","رمادي","Gris"],["gray-dark","#555555","رمادي غامق","Gris foncé"],
+  ["silver","#C0C0C0","فضي","Argent"],["beige","#D9C2A3","بيج","Beige"],
+  ["sand","#C2B280","رملي","Sable"],["camel","#C19A6B","جملي","Chameau"],
+  ["cream","#FFF4D6","كريمي","Crème"],["taupe","#8B7D6B","توبي","Taupe"],
+  ["brown-light","#A67B5B","بني فاتح","Marron clair"],["brown","#6F4E37","بني","Marron"],
+  ["chocolate","#3B2417","شوكولا","Chocolat"],["coffee","#4B3621","قهوة","Café"],
+  ["navy","#0B1F3A","كحلي","Bleu marine"],["blue-dark","#003366","أزرق داكن","Bleu foncé"],
+  ["blue","#1565C0","أزرق","Bleu"],["royal-blue","#4169E1","أزرق ملكي","Bleu roi"],
+  ["denim","#3B5B92","جينز","Denim"],["sky","#5BC0EB","سماوي","Bleu ciel"],
+  ["turquoise","#20B2AA","تركواز","Turquoise"],["teal","#00796B","بترولي مخضر","Sarcelle"],
+  ["mint","#98D8C8","نعناعي","Menthe"],["green-light","#81C784","أخضر فاتح","Vert clair"],
+  ["green","#2E7D32","أخضر","Vert"],["emerald","#008C7A","زمردي","Émeraude"],
+  ["olive","#6B7A1E","زيتي","Olive"],["khaki","#BDB76B","كاكي","Kaki"],
+  ["yellow","#FDD835","أصفر","Jaune"],["mustard","#C99700","خردلي","Moutarde"],
+  ["gold","#D4AF37","ذهبي","Doré"],["orange","#FF9800","برتقالي","Orange"],
+  ["coral","#FF7F50","مرجاني","Corail"],["peach","#FFCBA4","خوخي","Pêche"],
+  ["red-light","#EF5350","أحمر فاتح","Rouge clair"],["red","#C62828","أحمر","Rouge"],
+  ["scarlet","#FF2400","قرمزي","Écarlate"],["brick","#A43A3A","طوبي","Brique"],
+  ["wine","#7A0019","نبيذي","Bordeaux"],
+  ["burgundy","#650A18","عنابي غامق","Bordeaux foncé"],
+  ["burgundy-fabric","#6F0B1A","عنابي القماش (لون الصورة)","Bordeaux tissu (photo)"],
+  ["maroon","#800000","ماروني","Grenat"],
+  ["rose-light","#F8BBD0","وردي فاتح","Rose clair"],["pink","#EC407A","وردي","Rose"],
+  ["fuchsia","#C2185B","فوشيا","Fuchsia"],["magenta","#D0006F","ماجنتا","Magenta"],
   ["purple-light","#CE93D8","بنفسجي فاتح","Violet clair"],
-  ["lilac","#B39DDB","ليلكي","Lilas"],
-  ["mauve","#9C6ADE","موف","Mauve"],
-  ["plum","#6A1B9A","برقوقي","Prune"],
-  ["orange","#FF9800","برتقالي","Orange"]
+  ["lilac","#B39DDB","ليلكي","Lilas"],["lavender","#E6E6FA","لافندر","Lavande"],
+  ["mauve","#9C6ADE","موف","Mauve"],["purple","#7B1FA2","بنفسجي","Violet"],
+  ["plum","#6A1B9A","برقوقي","Prune"]
 ];
+// إضافة تدرجات تلقائية لكل لون: فاتح، متوسط، غامق.
+// يتم الإبقاء على اللون الأصلي أيضاً لضمان توافق المنتجات القديمة.
+function hexToRgb(hex){
+  const h=String(hex||"").replace("#","").trim();
+  const n=parseInt(h.length===3?h.split("").map(c=>c+c).join(""):h,16);
+  return {r:(n>>16)&255,g:(n>>8)&255,b:n&255};
+}
+function rgbToHex(r,g,b){
+  return "#"+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,"0")).join("").toUpperCase();
+}
+function mixHex(hex,target,amount){
+  const a=hexToRgb(hex), t=hexToRgb(target);
+  return rgbToHex(
+    a.r+(t.r-a.r)*amount,
+    a.g+(t.g-a.g)*amount,
+    a.b+(t.b-a.b)*amount
+  );
+}
+function shadeLabelAr(name,shade){
+  return shade==="light" ? `${name} فاتح` : shade==="medium" ? `${name} متوسط` : `${name} غامق`;
+}
+function shadeLabelFr(name,shade){
+  return shade==="light" ? `${name} clair` : shade==="medium" ? `${name} moyen` : `${name} foncé`;
+}
+const BASE_COLOR_PALETTE = COLOR_PALETTE.slice();
+const COLOR_SHADES = [
+  ["light", "#FFFFFF", .52],
+  ["medium", "#FFFFFF", .12],
+  ["dark", "#000000", .35]
+];
+COLOR_PALETTE.push(
+  ...BASE_COLOR_PALETTE.flatMap(([key,hex,ar,fr]) =>
+    COLOR_SHADES.map(([shade,target,amount]) => [
+      `${key}-${shade}`,
+      mixHex(hex,target,amount),
+      shadeLabelAr(ar,shade),
+      shadeLabelFr(fr,shade)
+    ])
+  )
+);
+
 const byKey = Object.fromEntries(COLOR_PALETTE.map(x=>[x[0],{key:x[0],hex:x[1],ar:x[2],fr:x[3]}]));
-const LIGHT = new Set(["white","silver","cream","yellow","gold","beige","gray"]);
+const LIGHT = new Set(COLOR_PALETTE.filter(x=>{
+  const {r,g,b}=hexToRgb(x[1]);
+  return (r*0.299+g*0.587+b*0.114)>175;
+}).map(x=>x[0]));
 
 let lang = localStorage.getItem("queen_lang") || "ar";
 let PRODUCTS = [];
@@ -1478,6 +1556,7 @@ const ORDERS_URL = SUPABASE_URL + "/rest/v1/orders";
 const ITEMS_URL = SUPABASE_URL + "/rest/v1/order_items";
 let ADMIN_ORDERS = [];
 let ADMIN_ORDER_ITEMS = {};
+let SELECTED_ORDER_IDS = new Set();
 
 async function openAdmin(){
   const room = document.getElementById("adminRoom");
@@ -1656,12 +1735,65 @@ function filteredOrders(){
   });
 }
 
+function updateBulkOrdersUI(){
+  const visible = filteredOrders();
+  const selectedVisible = visible.filter(o=>SELECTED_ORDER_IDS.has(String(o.id))).length;
+  const count = SELECTED_ORDER_IDS.size;
+  const countEl = document.getElementById("ordersSelectedCount");
+  const delBtn = document.getElementById("ordersBulkDelete");
+  const all = document.getElementById("ordersSelectAll");
+  if(countEl) countEl.textContent = count ? `تم تحديد ${count} طلب${count===1?"":"ات"}` : "لم يتم تحديد أي طلب";
+  if(delBtn) delBtn.disabled = count===0;
+  if(all){
+    all.checked = visible.length>0 && selectedVisible===visible.length;
+    all.indeterminate = selectedVisible>0 && selectedVisible<visible.length;
+  }
+}
+
+async function confirmAdminForDeletion(count){
+  if(!confirm(`تحذير: سيتم حذف ${count} طلب${count===1?"":"ات"} نهائياً من Supabase ولا يمكن التراجع عن ذلك.`)) return null;
+  const email = prompt("للتأكيد، أدخلي بريد الإدارة:");
+  if(email===null) return null;
+  const password = prompt("أدخلي كلمة مرور الإدارة لتأكيد الحذف:");
+  if(password===null) return null;
+  if(!email.trim() || !password){ alert("يجب إدخال البريد وكلمة المرور."); return null; }
+  const auth = await fetch(SUPABASE_URL+"/auth/v1/token?grant_type=password",{
+    method:"POST", headers:apiHeaders(""), body:JSON.stringify({email:email.trim(), password})
+  });
+  const authData = await auth.json().catch(()=>({}));
+  if(!auth.ok) throw new Error(authData.error_description||authData.msg||"بيانات التأكيد غير صحيحة.");
+  return {...apiHeaders(authData.access_token),"Prefer":"return=minimal"};
+}
+
+async function deleteOrdersByIds(ids){
+  const unique=[...new Set(ids.map(String))];
+  if(!unique.length) return 0;
+  const headers = await confirmAdminForDeletion(unique.length);
+  if(!headers) return 0;
+  let deleted=0;
+  for(const id of unique){
+    const di = await fetch(ITEMS_URL+"?order_id=eq."+encodeURIComponent(id),{method:"DELETE",headers});
+    if(!di.ok) throw new Error("تعذر حذف عناصر أحد الطلبات: "+await di.text());
+    const d = await fetch(ORDERS_URL+"?id=eq."+encodeURIComponent(id),{method:"DELETE",headers});
+    if(!d.ok) throw new Error("تعذر حذف أحد الطلبات: "+await d.text());
+    deleted++;
+  }
+  const removed = new Set(unique);
+  ADMIN_ORDERS = ADMIN_ORDERS.filter(o=>!removed.has(String(o.id)));
+  unique.forEach(id=>{ delete ADMIN_ORDER_ITEMS[id]; SELECTED_ORDER_IDS.delete(id); });
+  renderOrdersList();
+  updateDashboard();
+  toast(`تم حذف ${deleted} طلب${deleted===1?"":"ات"} نهائياً ✓`);
+  return deleted;
+}
+
 function renderOrdersList(){
   const host = document.getElementById("ordersList");
   if(!host) return;
   const list = filteredOrders();
   if(!list.length){
     host.innerHTML = '<p class="admin-muted">لا توجد طلبات مطابقة</p>';
+    updateBulkOrdersUI();
     return;
   }
   host.innerHTML = "";
@@ -1701,6 +1833,7 @@ function renderOrdersList(){
     const card = document.createElement("div");
     card.className = "order-card";
     card.innerHTML = `
+      <label class="order-select-label" style="margin-bottom:10px"><input type="checkbox" data-select-order ${SELECTED_ORDER_IDS.has(String(o.id))?"checked":""}> تحديد هذا الطلب</label>
       <div class="order-head">
         <strong>${escHtml(o.customer_name||"—")}</strong>
         <span class="order-status s-${st}">${STATUS_AR[st]||st}</span>
@@ -1724,6 +1857,15 @@ function renderOrdersList(){
         <button type="button" data-save>تحديث الحالة</button>
         <button type="button" class="danger" data-delete>🗑 حذف الطلب</button>
       </div>`;
+    const selectBox = card.querySelector("[data-select-order]");
+    selectBox.onchange = ()=>{
+      if(selectBox.checked) SELECTED_ORDER_IDS.add(String(o.id));
+      else SELECTED_ORDER_IDS.delete(String(o.id));
+      card.classList.toggle("is-selected", selectBox.checked);
+      updateBulkOrdersUI();
+    };
+    card.classList.toggle("is-selected", selectBox.checked);
+
     card.querySelector("[data-save]").onclick = async ()=>{
       const status = card.querySelector("[data-status]").value;
       try{
@@ -1741,50 +1883,31 @@ function renderOrdersList(){
     };
 
     card.querySelector("[data-delete]").onclick = async ()=>{
-      if(!confirm("تحذير: سيتم حذف الطلب نهائياً من Supabase ولا يمكن التراجع عن ذلك.")) return;
-
-      const email = prompt("للتأكيد، أدخلي بريد الإدارة:");
-      if(email === null) return;
-      const password = prompt("أدخلي كلمة مرور الإدارة لتأكيد الحذف:");
-      if(password === null) return;
-      if(!email.trim() || !password) return alert("يجب إدخال البريد وكلمة المرور.");
-
-      try{
-        // Re-authenticate before destructive action.
-        const auth = await fetch(SUPABASE_URL+"/auth/v1/token?grant_type=password",{
-          method:"POST",
-          headers:apiHeaders(""),
-          body:JSON.stringify({email:email.trim(), password})
-        });
-        const authData = await auth.json().catch(()=>({}));
-        if(!auth.ok) throw new Error(authData.error_description||authData.msg||"بيانات التأكيد غير صحيحة.");
-
-        const token = authData.access_token;
-        const delHeaders = {...apiHeaders(token),"Prefer":"return=minimal"};
-
-        // Delete children first so the order can be removed even when order_items has no ON DELETE CASCADE.
-        const di = await fetch(ITEMS_URL+"?order_id=eq."+encodeURIComponent(o.id),{
-          method:"DELETE", headers:delHeaders
-        });
-        if(!di.ok) throw new Error("تعذر حذف عناصر الطلب: "+await di.text());
-
-        const d = await fetch(ORDERS_URL+"?id=eq."+encodeURIComponent(o.id),{
-          method:"DELETE", headers:delHeaders
-        });
-        if(!d.ok) throw new Error("تعذر حذف الطلب: "+await d.text());
-
-        ADMIN_ORDERS = ADMIN_ORDERS.filter(x=>x.id!==o.id);
-        delete ADMIN_ORDER_ITEMS[o.id];
-        renderOrdersList();
-        updateDashboard();
-        toast("تم حذف الطلب نهائياً ✓");
-      }catch(e){
-        alert(e.message||"فشل حذف الطلب");
-      }
+      try{ await deleteOrdersByIds([o.id]); }
+      catch(e){ alert(e.message||"فشل حذف الطلب"); }
     };
     host.appendChild(card);
   });
+  updateBulkOrdersUI();
 }
+
+document.getElementById("ordersSelectAll")?.addEventListener("change", e=>{
+  filteredOrders().forEach(o=>{
+    const id=String(o.id);
+    if(e.target.checked) SELECTED_ORDER_IDS.add(id); else SELECTED_ORDER_IDS.delete(id);
+  });
+  renderOrdersList();
+});
+document.getElementById("ordersClearSelection")?.addEventListener("click", ()=>{
+  SELECTED_ORDER_IDS.clear();
+  renderOrdersList();
+});
+document.getElementById("ordersBulkDelete")?.addEventListener("click", async ()=>{
+  const ids=[...SELECTED_ORDER_IDS];
+  if(!ids.length) return;
+  try{ await deleteOrdersByIds(ids); }
+  catch(e){ alert(e.message||"فشل حذف الطلبات المحددة"); }
+});
 
 document.getElementById("orderSearch")?.addEventListener("input", renderOrdersList);
 document.getElementById("orderStatusFilter")?.addEventListener("change", renderOrdersList);
