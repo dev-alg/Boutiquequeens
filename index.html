@@ -570,6 +570,25 @@ body.admin-open .bottom-bar{display:none!important}
 <style id="order-variant-badge-style">
 .order-variant-badge{display:inline-flex;align-items:center;gap:5px;margin-inline-end:5px;margin-top:4px;padding:3px 7px;border-radius:7px;background:rgba(255,255,255,.06);color:#ddd;font-size:.66rem}
 .order-variant-badge b{color:var(--gold-l);font-weight:800}
+
+<style id="admin-whatsapp-style">
+.admin-wa-btn{
+  padding:8px 10px;border-radius:10px;border:0;
+  background:#25D366;color:#fff;font-size:.75rem;font-weight:800;cursor:pointer;
+  display:inline-flex;align-items:center;gap:5px;
+}
+.admin-wa-btn:hover{filter:brightness(.96)}
+.admin-wa-btn:disabled{opacity:.55;cursor:not-allowed}
+.order-bulk-toolbar .bulk-wa{
+  background:#25D366;color:#fff;border-color:#25D366;
+}
+.admin-wa-note{
+  margin:-4px 0 12px;padding:8px 10px;border-radius:10px;
+  background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.2);
+  color:#a9e8bd;font-size:.72rem;line-height:1.6;
+}
+</style>
+
 </style>
 
 <style id="admin-order-products-real-style">
@@ -825,8 +844,10 @@ body.admin-open .bottom-bar{display:none!important}
           <label class="order-select-label"><input id="ordersSelectAll" type="checkbox"> تحديد كل الطلبات الظاهرة</label>
           <span class="admin-muted" id="ordersSelectedCount">لم يتم تحديد أي طلب</span>
           <button type="button" class="bulk-danger" id="ordersBulkDelete" disabled>🗑 حذف المحدد</button>
+          <button type="button" class="bulk-wa" id="ordersBulkWhatsApp">💬 واتساب للكل</button>
           <button type="button" id="ordersClearSelection">إلغاء التحديد</button>
         </div>
+        <div class="admin-wa-note">💬 زر واتساب يفتح محادثة الزبون مع الرسالة جاهزة للإرسال. «واتساب للكل» يجهّز الرسالة لكل الطلبات الظاهرة حسب البحث/التصفية.</div>
         <div id="ordersList" class="admin-list"><p class="admin-muted">جاري تحميل الطلبات...</p></div>
       </section>
 
@@ -1892,6 +1913,103 @@ async function deleteOrdersByIds(ids){
   return deleted;
 }
 
+
+function normalizeWhatsAppNumber(value){
+  let n=String(value||"").replace(/[^\d+]/g,"");
+  if(n.startsWith("+")) n=n.slice(1);
+  if(n.startsWith("00")) n=n.slice(2);
+  if(n.startsWith("213")) return n;
+  if(/^0[567]\d{8}$/.test(n)) return "213"+n.slice(1);
+  if(/^[567]\d{8}$/.test(n)) return "213"+n;
+  return "";
+}
+
+function buildWhatsAppOrderMessage(order){
+  const name=String(order?.customer_name||"").trim() || "زبوننا";
+  const items=ADMIN_ORDER_ITEMS[String(order?.id)] || ADMIN_ORDER_ITEMS[order?.id] || [];
+  const productLines=items.length
+    ? items.map(it=>{
+        const v=getOrderVariant(it);
+        const qty=it.quantity ?? it.qty ?? 1;
+        const extra=[];
+        if(v.color) extra.push("اللون: "+colorLabel(v.color));
+        if(v.size) extra.push("المقاس: "+v.size);
+        return "• "+v.name+" × "+qty+(extra.length?" ("+extra.join(" / ")+")":"");
+      }).join("\n")
+    : "• تفاصيل المنتجات غير محفوظة";
+
+  const total=money(order?.grand_total);
+  const wilaya=String(order?.wilaya_name||"").trim();
+  const commune=String(order?.commune||"").trim();
+  const location=[wilaya,commune].filter(Boolean).join(" — ");
+  const delivery=order?.delivery_type==="office"
+    ? "مكتب DHD Express"+(order?.office_name?" — "+order.office_name:"")
+    : "إلى المنزل";
+
+  return `مرحباً ${name}، شكراً لطلبك من Queen shop!
+
+الطلبية:
+${productLines}
+
+السعر الإجمالي: ${total} (شاملة التوصيل${location?" إلى "+location:""})
+طريقة التوصيل: ${delivery}
+
+لتأكيد طلبك وشحنه، يرجى الرد بـ 1.
+للإلغاء، رد بـ 2.`;
+}
+
+function openWhatsAppForOrder(order){
+  const number=normalizeWhatsAppNumber(order?.phone);
+  if(!number){
+    alert("رقم هاتف هذا الزبون غير صالح للواتساب: "+(order?.phone||"غير موجود"));
+    return false;
+  }
+  const message=buildWhatsAppOrderMessage(order);
+  const url="https://wa.me/"+number+"?text="+encodeURIComponent(message);
+  window.open(url,"_blank","noopener,noreferrer");
+  return true;
+}
+
+
+// Fallback for the individual WhatsApp buttons: handles any order card rendered
+// after filtering/re-rendering as well.
+document.addEventListener("click", (ev)=>{
+  const btn = ev.target.closest("[data-whatsapp]");
+  if(!btn) return;
+  const card = btn.closest(".order-card");
+  if(!card) return;
+  const orderId = card.querySelector("[data-select-order]")?.closest("label")?.querySelector("input") ? null : null;
+  // The card handler below is the primary path. This fallback finds the order
+  // through the visible card's customer phone number.
+  const phoneText = card.querySelector(".order-meta")?.innerText || "";
+  const phoneMatch = phoneText.match(/(?:\+213|00213|0)?[567]\d{8}/);
+  if(phoneMatch){
+    const order = ADMIN_ORDERS.find(o => normalizeWhatsAppNumber(o.phone) === normalizeWhatsAppNumber(phoneMatch[0]));
+    if(order) openWhatsAppForOrder(order);
+  }
+}, true);
+
+function sendWhatsAppToAllVisibleOrders(){
+  const list=filteredOrders();
+  if(!list.length){
+    alert("لا توجد طلبات ظاهرة لإرسال الرسائل.");
+    return;
+  }
+  if(!confirm("سيتم فتح محادثة واتساب لكل طلب ظاهر ("+list.length+"). ستظهر الرسالة جاهزة، ويجب الضغط على إرسال داخل واتساب لكل محادثة. متابعة؟")) return;
+
+  let invalid=0;
+  // Open each chat separately. Some browsers may block multiple tabs;
+  // valid links are still prepared and the user can allow popups if needed.
+  list.forEach((order,index)=>{
+    const number=normalizeWhatsAppNumber(order?.phone);
+    if(!number){ invalid++; return; }
+    const url="https://wa.me/"+number+"?text="+encodeURIComponent(buildWhatsAppOrderMessage(order));
+    setTimeout(()=>window.open(url,"_blank","noopener,noreferrer"), index*350);
+  });
+  if(invalid) setTimeout(()=>alert("تم تجهيز الرسائل، لكن "+invalid+" طلبات لا تحتوي على رقم جزائري صالح للواتساب."), 500);
+  else toast("تم تجهيز رسائل واتساب للطلبات الظاهرة ✓");
+}
+
 function renderOrdersList(){
   const host = document.getElementById("ordersList");
   if(!host) return;
@@ -1960,6 +2078,7 @@ function renderOrdersList(){
           <option value="cancelled" ${st==="cancelled"?"selected":""}>ملغى</option>
         </select>
         <button type="button" data-save>تحديث الحالة</button>
+        <button type="button" class="admin-wa-btn" data-whatsapp style="display:inline-flex !important;visibility:visible !important;opacity:1 !important;position:relative;z-index:5;min-width:150px;justify-content:center;align-items:center;cursor:pointer;">💬 إرسال للزبون عبر واتساب</button>
         <button type="button" class="danger" data-delete>🗑 حذف الطلب</button>
       </div>`;
     const selectBox = card.querySelector("[data-select-order]");
@@ -1985,6 +2104,10 @@ function renderOrdersList(){
         updateDashboard();
         toast("تم تحديث الحالة ✓");
       }catch(e){ alert(e.message||"فشل التحديث"); }
+    };
+
+    card.querySelector("[data-whatsapp]").onclick = ()=>{
+      openWhatsAppForOrder(o);
     };
 
     card.querySelector("[data-delete]").onclick = async ()=>{
@@ -2013,6 +2136,8 @@ document.getElementById("ordersBulkDelete")?.addEventListener("click", async ()=
   try{ await deleteOrdersByIds(ids); }
   catch(e){ alert(e.message||"فشل حذف الطلبات المحددة"); }
 });
+
+document.getElementById("ordersBulkWhatsApp")?.addEventListener("click", sendWhatsAppToAllVisibleOrders);
 
 document.getElementById("orderSearch")?.addEventListener("input", renderOrdersList);
 document.getElementById("orderStatusFilter")?.addEventListener("change", renderOrdersList);
