@@ -548,6 +548,35 @@ body.admin-open .bottom-bar{display:none!important}
 }
 </style>
 
+<style id="sold-out-feature-style">
+.sold-out-badge{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,10,10,.58);color:#fff;font-weight:900;font-size:.9rem;z-index:3;backdrop-filter:blur(2px)}
+.admin-item.is-sold-out{opacity:.72;border-color:rgba(239,68,68,.28)}
+.admin-stock-badge{display:block;margin-top:4px;width:max-content;padding:3px 7px;border-radius:999px;font-size:.65rem;font-weight:900;background:rgba(34,197,94,.12);color:#86efac}
+.admin-stock-badge.out{background:rgba(239,68,68,.14);color:#fca5a5}
+.stock-toggle{display:flex;align-items:center;gap:9px;padding:11px 12px;border-radius:12px;background:#0f1115;border:1px solid rgba(255,255,255,.1);cursor:pointer}
+.stock-toggle input{width:19px;height:19px;accent-color:#ef4444}
+.stock-toggle b{font-size:.82rem}.stock-toggle small{display:block;color:#9aa0aa;font-size:.68rem;margin-top:2px}
+</style>
+
+<style id="color-image-feature-style">
+.admin-color-images{display:grid;gap:10px;margin-top:9px}
+.admin-color-image-row{display:grid;grid-template-columns:30px minmax(0,1fr) 52px;gap:9px;align-items:center;padding:9px;border:1px solid rgba(255,255,255,.08);background:#0f1115;border-radius:12px}
+.admin-color-image-row.image-first{grid-template-columns:68px minmax(0,1fr)}
+.admin-color-image-row.image-first .admin-color-image-preview{width:68px;height:82px;display:block;object-fit:cover;border-radius:10px;background:#17191e;border:1px solid rgba(255,255,255,.14)}
+.admin-color-image-row.image-first .admin-color-image-info{width:100%}
+.admin-color-image-swatch{width:30px;height:30px;min-width:30px;border-radius:50%;border:2px solid rgba(255,255,255,.25)}
+.admin-color-image-info{min-width:0}
+.admin-color-image-info strong{display:block;font-size:.76rem;color:#eee;margin-bottom:5px}
+.admin-color-image-info small{display:block;font-size:.65rem;color:#888;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.admin-color-image-preview{width:52px;height:52px;border-radius:10px;object-fit:cover;background:#17191e;border:1px solid rgba(255,255,255,.12)}
+.admin-color-image-select{width:100%;min-width:0;background:#1b1f27;color:#eee;border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:8px 7px;font-size:.68rem;outline:none}
+.admin-color-image-actions{display:flex;align-items:center;gap:5px;margin-top:5px;flex-wrap:wrap}
+.admin-color-image-actions input[type=file]{display:none}
+.admin-color-image-actions label,.admin-color-image-clear{padding:6px 8px;border-radius:8px;background:#2a2f38;color:#eee;font-size:.64rem;font-weight:800;cursor:pointer;border:0}
+.admin-color-image-clear{color:#ffadb8}
+.color-image-hint{font-size:.7rem;color:#9aa0aa;line-height:1.6;margin-top:5px}
+</style>
+
 <style id="order-product-images-style">
 .order-products-with-images{display:flex;flex-direction:column;gap:9px;margin-top:10px}
 .order-product-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(255,255,255,.07)}
@@ -861,8 +890,10 @@ body.admin-open .bottom-bar{display:none!important}
             <div class="field"><label>ملاحظة / فئة</label><input id="productColor" placeholder="مثال: متوفر بعدة ألوان"></div>
             <div class="field"><label>الوصف</label><textarea id="productDesc" rows="3"></textarea></div>
             <div class="field"><label>السعر (دج)</label><input id="productPrice" type="number" min="0" step="1" required></div>
+            <div class="field"><label class="stock-toggle"><input id="productSoldOut" type="checkbox"><span><b>نفد المنتج</b><small>عند تفعيلها سيختفي المنتج تلقائياً من جهة الزبون، ويمكن إعادته لاحقاً.</small></span></label></div>
             <div class="field"><label>الصور</label><input id="productImages" type="file" accept="image/*" multiple></div>
             <div class="field"><label>الألوان المتوفرة وتدرجات كل لون</label><div class="palette" id="productColorPalette"></div></div>
+            <div class="field" id="colorImagesField" hidden><label>تحديد لون كل صورة</label><div class="admin-color-images" id="productColorImages"></div><div class="color-image-hint">هنا تختارين لون كل صورة مباشرة. مثال: الصورة الأولى ← أسود، الصورة الثانية ← أبيض. عند اختيار الزبون للون ستظهر له الصورة التي ربطتها بهذا اللون.</div></div>
             <div class="field"><label>المقاسات</label><div class="size-palette" id="productSizePalette"></div></div>
             <div class="admin-actions">
               <button class="pri" type="submit" id="saveProduct">حفظ</button>
@@ -1099,21 +1130,39 @@ function normColors(row){
   }
   return a.filter(k=>byKey[k]);
 }
+function decodeColorImages(raw){
+  try{
+    const m=String(raw||"").match(/\[QS_COLOR_IMAGES_B64:([^\]]+)\]/i);
+    if(!m) return {};
+    const json=decodeURIComponent(escape(atob(m[1])));
+    const obj=JSON.parse(json);
+    return obj && typeof obj==="object" ? obj : {};
+  }catch(_){ return {}; }
+}
+function encodeColorImages(map){
+  try{ return btoa(unescape(encodeURIComponent(JSON.stringify(map||{})))); }catch(_){ return ""; }
+}
 function cleanDesc(s){
-  return String(s||"").replace(/<?-?\s*QS_SIZES\s*:[^>]*>?/gi,"").replace(/--\s*QS_SIZES\s*:[^\n]*/gi,"").replace(/\s{2,}/g," ").trim();
+  return String(s||"").replace(/<?-?\s*QS_SIZES\s*:[^>]*>?/gi,"").replace(/--\s*QS_SIZES\s*:[^\n]*/gi,"").replace(/\[QS_COLOR_IMAGES_B64:[^\]]+\]/gi,"").replace(/\s{2,}/g," ").trim();
 }
 function normalizeProduct(p){
   const paths = Array.isArray(p.image_paths)&&p.image_paths.length ? p.image_paths : (p.image_url?[p.image_url]:[]);
   let sizes = normSizes(p.sizes);
   const descRaw = p.description||"";
+  const rawColorImages=decodeColorImages(descRaw);
+  const colorImages={};
+  Object.keys(rawColorImages||{}).forEach(key=>{
+    const v=rawColorImages[key];
+    if(v) colorImages[key]=imageUrl(v);
+  });
   const m = descRaw.match(/QS_SIZES\s*:\s*([A-Za-z0-9,\s]+)/i);
   if(m) sizes = [...new Set(sizes.concat(normSizes(m[1].split(","))))];
   return {
-    id:p.id, name:p.name||"منتج", color:p.color||"",
+    id:p.id, name:p.name||"منتج", color:p.color||"", active:p.active!==false,
     desc:cleanDesc(descRaw), price:money(p.price),
     priceNum:Number(p.price)||0,
     images:paths.map(imageUrl).filter(Boolean),
-    sizes, availableColors:normColors(p)
+    sizes, availableColors:normColors(p), colorImages
   };
 }
 
@@ -1133,7 +1182,7 @@ function addToCart(prod, color, size){
   if(found) found.qty++;
   else cart.push({
     id:prod.id, name:prod.name, price:prod.price, qty:1,
-    image:prod.images[0]||"", selectedColor:color||"", selectedSize:size||""
+    image:(color && prod.colorImages && prod.colorImages[color]) || prod.images[0]||"", selectedColor:color||"", selectedSize:size||""
   });
   saveCart(); updateCartUI(); toast(t("تمت الإضافة إلى السلة ✓","Ajouté au panier ✓"));
 }
@@ -1153,7 +1202,7 @@ function render(){
     const imgs=prod.images.map((src,i)=>`<img src="${src}" alt="" class="${i===0?"on":""}" loading="${pi<2&&i===0?"eager":"lazy"}" decoding="async" ${pi<2&&i===0?'fetchpriority="high"':""}>`).join("") || `<img class="on" alt="">`;
     const pips=many?`<div class="card-pips">${prod.images.map((_,i)=>`<i class="${i===0?"on":""}"></i>`).join("")}</div>`:"";
     card.innerHTML=`
-      <div class="card-img" data-i="0">${imgs}${pips}</div>
+      <div class="card-img" data-i="0">${imgs}${pips}${prod.active===false?`<div class="sold-out-badge">${t("نفد المنتج","Rupture de stock")}</div>`:""}</div>
       <div class="card-body">
         <h3>${prod.name}</h3>
         <div class="card-row">
@@ -1164,6 +1213,7 @@ function render(){
     const box=card.querySelector(".card-img");
     box.addEventListener("click",e=>{
       e.stopPropagation();
+      if(prod.active===false) return;
       if(many){
         let i=Number(box.dataset.i||0);
         i=(i+1)%prod.images.length; box.dataset.i=i;
@@ -1173,10 +1223,11 @@ function render(){
     });
     card.querySelector(".btn-sm").addEventListener("click",e=>{
       e.stopPropagation();
+      if(prod.active===false){ toast(t("هذا المنتج نفد حالياً","Ce produit est en rupture")); return; }
       if(prod.availableColors.length || prod.sizes.length) openDetail(prod);
       else addToCart(prod,"","");
     });
-    card.addEventListener("click",()=>openDetail(prod));
+    card.addEventListener("click",()=>{ if(prod.active!==false) openDetail(prod); });
     grid.appendChild(card);
   });
 }
@@ -1235,6 +1286,9 @@ function openDetail(prod){
         selectedColor=key;
         colorHost.querySelectorAll(".color-dot").forEach(x=>x.classList.remove("selected"));
         b.classList.add("selected");
+        const colorImage=detailProduct.colorImages && detailProduct.colorImages[key];
+        document.getElementById("detailImage").src=colorImage || detailProduct.images[0] || "";
+        imgIndex=0;
       };
       colorHost.appendChild(b);
     });
@@ -1404,17 +1458,19 @@ document.getElementById("checkoutForm").addEventListener("submit", async e=>{
       const colorKey=x.selectedColor||"";
       const colorHex=(colorKey && byKey[colorKey]) ? byKey[colorKey].hex : "";
       const size=x.selectedSize||"";
-      // Keep the real product name intact while embedding a private fallback marker.
-      // This survives RPCs that do not map selected_color/selected_size columns.
-      const variantMarker=(colorKey||size)
-        ? `\n[QS_VARIANT_COLOR:${colorKey}|${colorHex}][QS_VARIANT_SIZE:${size}]`
+      const orderImage=x.image||x.image_url||x.product_image||"";
+      // Save a complete snapshot with the order itself. This means deleting the
+      // product/model from the shop later will NOT erase its name, color, size,
+      // or the selected color image from old orders.
+      const variantMarker=(colorKey||size||orderImage)
+        ? `\n[QS_VARIANT_COLOR:${colorKey}|${colorHex}][QS_VARIANT_SIZE:${size}][QS_VARIANT_IMAGE:${encodeURIComponent(orderImage)}]`
         : "";
       return {
         product_id:x.id||null,
         product_name:String(x.name||"")+variantMarker,
         selected_color:colorKey||null,
         selected_size:size||null,
-        product_image:x.image||x.image_url||x.product_image||null,
+        product_image:orderImage||null,
         unit_price:priceNumber(x.price),
         quantity:x.qty,
         total_price:priceNumber(x.price)*x.qty
@@ -1476,9 +1532,14 @@ function escapeOrderText(value){
 
 function getOrderItemImage(item){
   if(!item) return "";
-  return item.image_url || item.image || item.product_image || item.productImage ||
+  const direct=item.image_url || item.image || item.product_image || item.productImage ||
          item.imageUrl || item.thumbnail || item.photo || item.product?.image_url ||
          item.product?.image || "";
+  if(direct) return direct;
+  const raw=String(item?.product_name||item?.productName||item?.name||"");
+  const m=raw.match(/\[QS_VARIANT_IMAGE:([^\]]*)\]/i);
+  if(m?.[1]){ try{return decodeURIComponent(m[1]);}catch(_){ return m[1]; } }
+  return "";
 }
 
 
@@ -1486,8 +1547,10 @@ function parseOrderVariantFallback(item){
   const raw=String(item?.product_name||item?.productName||item?.name||"");
   const cm=raw.match(/\[QS_VARIANT_COLOR:([^|\]]*)\|([^\]]*)\]/i);
   const sm=raw.match(/\[QS_VARIANT_SIZE:([^\]]*)\]/i);
+  const im=raw.match(/\[QS_VARIANT_IMAGE:([^\]]*)\]/i);
   const clean=raw.replace(/\[QS_VARIANT_COLOR:[^\]]*\]/gi,"")
                  .replace(/\[QS_VARIANT_SIZE:[^\]]*\]/gi,"")
+                 .replace(/\[QS_VARIANT_IMAGE:[^\]]*\]/gi,"")
                  .trim();
   return {
     cleanName:clean || "منتج",
@@ -2160,6 +2223,63 @@ function updateDashboard(){
 }
 
 /* Products admin (palette/list/save) */
+let ADMIN_COLOR_IMAGE_MAP = {};
+let ADMIN_COLOR_IMAGE_FILES = new Map();
+let ADMIN_PRODUCT_IMAGE_OPTIONS = [];
+
+function renderAdminColorImages(selected=[], existing={}, options=ADMIN_PRODUCT_IMAGE_OPTIONS){
+  const field=document.getElementById("colorImagesField");
+  const host=document.getElementById("productColorImages");
+  if(!field || !host) return;
+  field.hidden=!options.length;
+  host.innerHTML="";
+  ADMIN_COLOR_IMAGE_MAP={...(existing||{})};
+  if(!options.length) return;
+
+  // Show every uploaded/existing image and let the admin assign its color.
+  options.forEach((opt,i)=>{
+    const assignedColor=selected.find(key=>String(ADMIN_COLOR_IMAGE_MAP[key]||"")===String(opt.value)) || "";
+    const row=document.createElement("div");
+    row.className="admin-color-image-row image-first";
+    const preview=opt.src || (opt.value ? imageUrl(opt.value) : "");
+    const colorOptions=`<option value="">بدون لون</option>` + selected.map(key=>{
+      const c=byKey[key];
+      return `<option value="${escHtml(key)}" ${assignedColor===key?"selected":""}>${escHtml(colorLabel(key))}</option>`;
+    }).join("");
+    row.innerHTML=`
+      <img class="admin-color-image-preview" src="${preview?escHtml(preview):""}" alt="الصورة ${i+1}">
+      <div class="admin-color-image-info">
+        <strong>الصورة ${i+1}${opt.name?" — "+escHtml(opt.name):""}</strong>
+        <select class="admin-color-image-select" data-image-color>${colorOptions}</select>
+        <small class="color-image-name">${assignedColor?"مرتبطة بـ "+escHtml(colorLabel(assignedColor)):"اختاري اللون المطابق لهذه الصورة"}</small>
+      </div>`;
+
+    const select=row.querySelector("[data-image-color]");
+    select.onchange=()=>{
+      const oldColor=selected.find(key=>String(ADMIN_COLOR_IMAGE_MAP[key]||"")===String(opt.value));
+      if(oldColor) delete ADMIN_COLOR_IMAGE_MAP[oldColor];
+      const newColor=select.value;
+      if(newColor) ADMIN_COLOR_IMAGE_MAP[newColor]=opt.value;
+      row.querySelector(".color-image-name").textContent=newColor
+        ? "مرتبطة بـ "+colorLabel(newColor)
+        : "اختاري اللون المطابق لهذه الصورة";
+    };
+    host.appendChild(row);
+  });
+}
+
+function getAdminColorImageMap(){ return {...ADMIN_COLOR_IMAGE_MAP}; }
+function setAdminProductImageOptions(filesOrPaths=[]){
+  // Revoke old object URLs before replacing them.
+  ADMIN_PRODUCT_IMAGE_OPTIONS.forEach(o=>{ if(o?.objectUrl) URL.revokeObjectURL(o.objectUrl); });
+  ADMIN_PRODUCT_IMAGE_OPTIONS=filesOrPaths.map((item,i)=>{
+    if(typeof item === "string") return {value:item,label:"الصورة "+(i+1),src:imageUrl(item),fileIndex:null,name:""};
+    const objectUrl=URL.createObjectURL(item);
+    return {value:"__file_"+i,label:"الصورة "+(i+1),src:objectUrl,fileIndex:i,name:item.name||"",objectUrl};
+  });
+  renderAdminColorImages(getAdminColors(),getAdminColorImageMap(),ADMIN_PRODUCT_IMAGE_OPTIONS);
+}
+
 function renderAdminPalette(selected=[]){
   const host=document.getElementById("productColorPalette"); if(!host) return;
   host.innerHTML="";
@@ -2168,7 +2288,7 @@ function renderAdminPalette(selected=[]){
     l.className=selected.includes(key)?"selected":"";
     l.style.background=hex;
     l.innerHTML=`<input type="checkbox" value="${key}" ${selected.includes(key)?"checked":""}>`;
-    l.onclick=()=>setTimeout(()=>l.classList.toggle("selected",l.querySelector("input").checked),0);
+    l.onclick=()=>setTimeout(()=>{ l.classList.toggle("selected",l.querySelector("input").checked); renderAdminColorImages(getAdminColors(),getAdminColorImageMap()); },0);
     host.appendChild(l);
   });
 }
@@ -2236,10 +2356,14 @@ async function refreshAdminList(){
     (Array.isArray(rows)?rows:[]).forEach(row=>{
       const paths=Array.isArray(row.image_paths)?row.image_paths:[];
       const el=document.createElement("div"); el.className="admin-item";
+      el.className = "admin-item"+(row.active===false?" is-sold-out":"");
       el.innerHTML=`
         <img src="${imageUrl(paths[0]||"")}" alt="">
-        <div><strong>${escHtml(row.name||"")}</strong><span>${money(row.price)}</span></div>
+        <div><strong>${escHtml(row.name||"")}</strong><span>${money(row.price)}</span>
+          <small class="admin-stock-badge ${row.active===false?"out":""}">${row.active===false?"نفد المنتج — مخفي عن الزبائن":"متوفر للزبائن"}</small>
+        </div>
         <div style="display:flex;flex-direction:column;gap:4px">
+          <button type="button" class="chip" data-stock>${row.active===false?"إرجاع للمخزون":"نفد المنتج"}</button>
           <button type="button" class="chip" data-e>تعديل</button>
           <button type="button" class="chip" data-d>حذف</button>
         </div>`;
@@ -2247,13 +2371,29 @@ async function refreshAdminList(){
         document.getElementById("editId").value=row.id;
         document.getElementById("productName").value=row.name||"";
         document.getElementById("productColor").value=row.color||"";
-        document.getElementById("productDesc").value=row.description||"";
+        document.getElementById("productDesc").value=cleanDesc(row.description||"");
         document.getElementById("productPrice").value=row.price||0;
+        document.getElementById("productSoldOut").checked = row.active===false;
+        ADMIN_COLOR_IMAGE_FILES.clear();
+        const existingPaths=Array.isArray(row.image_paths)?row.image_paths:[];
+        setAdminProductImageOptions(existingPaths);
         renderAdminPalette(normColors(row));
+        renderAdminColorImages(normColors(row),decodeColorImages(row.description||""),ADMIN_PRODUCT_IMAGE_OPTIONS);
         renderAdminSizes(normSizes(row.sizes));
         document.getElementById("saveProduct").textContent=t("حفظ التعديل","Enregistrer");
         switchAdminTab("products");
         document.getElementById("productForm").scrollIntoView({behavior:"smooth",block:"start"});
+      };
+      el.querySelector("[data-stock]").onclick=async()=>{
+        try{
+          if(!await ensureAdminToken()) throw new Error(t("انتهت جلسة الإدارة. سجّلي الدخول مرة أخرى.","Session expirée."));
+          const nextActive = row.active===false;
+          const r=await fetch(TABLE_URL+"?id=eq."+encodeURIComponent(row.id),{method:"PATCH",headers:{...apiHeaders(),"Prefer":"return=minimal"},body:JSON.stringify({active:nextActive})});
+          if(!r.ok) throw new Error(await r.text());
+          row.active=nextActive;
+          await refreshAdminList(); await loadProducts(); updateDashboard();
+          toast(nextActive?t("تم إرجاع المنتج للمتجر ✓","Produit remis en ligne ✓"):t("تم إخفاء المنتج لأنه نفد ✓","Produit masqué ✓"));
+        }catch(e){ alert(e.message||t("فشل تحديث حالة المنتج","Échec de mise à jour")); }
       };
       el.querySelector("[data-d]").onclick=async()=>{
         if(!confirm(t("حذف المنتج؟","Supprimer ?"))) return;
@@ -2269,9 +2409,20 @@ async function refreshAdminList(){
 document.getElementById("cancelEdit").onclick=()=>{
   document.getElementById("productForm").reset();
   document.getElementById("editId").value="";
-  renderAdminPalette([]); renderAdminSizes([]);
+  document.getElementById("productSoldOut").checked=false;
+  ADMIN_COLOR_IMAGE_FILES.clear(); ADMIN_COLOR_IMAGE_MAP={};
+  ADMIN_PRODUCT_IMAGE_OPTIONS.forEach(o=>{ if(o?.objectUrl) URL.revokeObjectURL(o.objectUrl); });
+  ADMIN_PRODUCT_IMAGE_OPTIONS=[];
+  renderAdminPalette([]); renderAdminColorImages([],{},[]); renderAdminSizes([]);
   document.getElementById("saveProduct").textContent=t("حفظ","Enregistrer");
 };
+
+document.getElementById("productImages")?.addEventListener("change", e=>{
+  const files=[...e.target.files];
+  ADMIN_COLOR_IMAGE_MAP={};
+  ADMIN_COLOR_IMAGE_FILES.clear();
+  setAdminProductImageOptions(files);
+});
 
 document.getElementById("productForm").addEventListener("submit", async e=>{
   e.preventDefault();
@@ -2286,14 +2437,33 @@ document.getElementById("productForm").addEventListener("submit", async e=>{
     const files=[...document.getElementById("productImages").files];
     let paths=[];
     if(files.length) paths=await uploadImages(files);
+    const selectedAdminColors=getAdminColors();
+    const colorImageMap=getAdminColorImageMap();
+    for(const [key,file] of ADMIN_COLOR_IMAGE_FILES.entries()){
+      const uploaded=await uploadImages([file]);
+      if(uploaded[0]) colorImageMap[key]=uploaded[0];
+    }
+    Object.keys(colorImageMap).forEach(key=>{ if(!selectedAdminColors.includes(key)) delete colorImageMap[key]; });
+    // If the admin selected one of the main product images, convert its temporary
+    // __file_N value to the actual uploaded Supabase path after upload.
+    if(paths.length){
+      Object.keys(colorImageMap).forEach(key=>{
+        const m=String(colorImageMap[key]).match(/^__file_(\d+)$/);
+        if(m && paths[Number(m[1])]) colorImageMap[key]=paths[Number(m[1])];
+        else if(m) delete colorImageMap[key];
+      });
+    }
+
+    const baseDesc=document.getElementById("productDesc").value.trim();
+    const encodedColorImages=encodeColorImages(colorImageMap);
     const body={
       name:document.getElementById("productName").value.trim(),
       color:document.getElementById("productColor").value.trim(),
-      description:document.getElementById("productDesc").value.trim(),
+      description:baseDesc + (encodedColorImages ? `\n[QS_COLOR_IMAGES_B64:${encodedColorImages}]` : ""),
       price:Number(document.getElementById("productPrice").value)||0,
-      available_colors:getAdminColors(),
+      available_colors:selectedAdminColors,
       sizes:getAdminSizes(),
-      active:true
+      active:!document.getElementById("productSoldOut").checked
     };
     if(paths.length) body.image_paths=paths;
     if(!body.name) throw new Error(t("أدخلي اسم المنتج","Nom requis"));
