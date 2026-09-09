@@ -611,6 +611,9 @@ body.admin-open .bottom-bar{display:none!important}
 .order-bulk-toolbar .bulk-wa{
   background:#25D366;color:#fff;border-color:#25D366;
 }
+.order-bulk-toolbar .bulk-sms{
+  background:#2563eb;color:#fff;border-color:#2563eb;
+}
 .admin-wa-note{
   margin:-4px 0 12px;padding:8px 10px;border-radius:10px;
   background:rgba(37,211,102,.08);border:1px solid rgba(37,211,102,.2);
@@ -804,6 +807,18 @@ body.admin-open .bottom-bar{display:none!important}
   </div>
 </div>
 
+<!-- Order success message -->
+<div class="overlay" id="orderSuccessOverlay" aria-hidden="true">
+  <div class="sheet" style="max-width:520px;text-align:center;padding:28px 20px 24px">
+    <div style="width:64px;height:64px;border-radius:50%;margin:4px auto 14px;background:var(--gold-s);border:1px solid var(--line);display:grid;place-items:center;color:var(--gold);font-size:30px;font-weight:900">✓</div>
+    <h2 style="font-size:1.25rem;margin-bottom:10px">تم تلقي طلبك بنجاح</h2>
+    <p style="color:var(--muted);font-size:.9rem;line-height:1.8">
+      سيتم التواصل معك لتأكيد الطلبية عبر الواتساب أو SMS
+    </p>
+    <button class="btn-main" id="orderSuccessClose" type="button" style="max-width:none;width:100%;margin-top:18px">حسناً</button>
+  </div>
+</div>
+
 <!-- Admin Room -->
 <div class="admin-room" id="adminRoom" aria-hidden="true">
   <div class="admin-top">
@@ -870,13 +885,16 @@ body.admin-open .bottom-bar{display:none!important}
           <button type="button" class="sec" id="ordersReload" style="padding:10px 14px;border-radius:12px;border:0;background:#2a2f38;color:#eee;font-weight:800;cursor:pointer">تحديث</button>
         </div>
         <div class="order-bulk-toolbar">
-          <label class="order-select-label"><input id="ordersSelectAll" type="checkbox"> تحديد كل الطلبات الظاهرة</label>
-          <span class="admin-muted" id="ordersSelectedCount">لم يتم تحديد أي طلب</span>
+          <label class="order-select-label"><input id="ordersSelectAll" type="checkbox"> تحديد كل الزبائن الظاهرين</label>
+          <span class="admin-muted" id="ordersSelectedCount">لم يتم تحديد أي زبون</span>
           <button type="button" class="bulk-danger" id="ordersBulkDelete" disabled>🗑 حذف المحدد</button>
-          <button type="button" class="bulk-wa" id="ordersBulkWhatsApp">💬 واتساب للكل</button>
+          <button type="button" class="bulk-wa" id="ordersBulkWhatsApp">💬 واتساب للمحدد</button>
+          <button type="button" class="bulk-sms" id="ordersBulkSMS">📱 SMS للمحدد</button>
           <button type="button" id="ordersClearSelection">إلغاء التحديد</button>
         </div>
-        <div class="admin-wa-note">💬 زر واتساب يفتح محادثة الزبون مع الرسالة جاهزة للإرسال. «واتساب للكل» يجهّز الرسالة لكل الطلبات الظاهرة حسب البحث/التصفية.</div>
+        <div class="admin-wa-note">
+          💬 حدد زبوناً واحداً أو عدة زبائن أو استخدم «تحديد كل الزبائن الظاهرين». واتساب يفتح الرسالة جاهزة، وSMS يفتح تطبيق الرسائل بالرسالة جاهزة. في الحالتين يجب الضغط على «إرسال» من جهازك.
+        </div>
         <div id="ordersList" class="admin-list"><p class="admin-muted">جاري تحميل الطلبات...</p></div>
       </section>
 
@@ -1413,6 +1431,23 @@ function updateOffices(){
 document.getElementById("c").onchange=()=>{updateTotals();updateOffices();};
 document.getElementById("deliveryType").onchange=()=>{updateTotals();updateOffices();};
 
+function showOrderSuccess(){
+  const ov=document.getElementById("orderSuccessOverlay");
+  if(!ov) return;
+  ov.classList.add("open");
+  ov.setAttribute("aria-hidden","false");
+}
+function closeOrderSuccess(){
+  const ov=document.getElementById("orderSuccessOverlay");
+  if(!ov) return;
+  ov.classList.remove("open");
+  ov.setAttribute("aria-hidden","true");
+}
+document.getElementById("orderSuccessClose")?.addEventListener("click", closeOrderSuccess);
+document.getElementById("orderSuccessOverlay")?.addEventListener("click", e=>{
+  if(e.target.id==="orderSuccessOverlay") closeOrderSuccess();
+});
+
 document.getElementById("checkoutForm").addEventListener("submit", async e=>{
   e.preventDefault();
   if(!cart.length) return;
@@ -1514,7 +1549,7 @@ document.getElementById("checkoutForm").addEventListener("submit", async e=>{
 
     cart=[]; saveCart(); renderCart(); updateCartUI();
     form.reset(); updateTotals(); updateOffices(); closeCart();
-    alert(t("تم حفظ وإرسال طلبك بنجاح ✓","Commande enregistrée avec succès ✓"));
+    showOrderSuccess();
   }catch(err){
     console.error("checkout",err);
     alert(err.message||t("حدث خطأ أثناء إرسال الطلب","Une erreur est survenue"));
@@ -2005,9 +2040,6 @@ function buildWhatsAppOrderMessage(order){
   const wilaya=String(order?.wilaya_name||"").trim();
   const commune=String(order?.commune||"").trim();
   const location=[wilaya,commune].filter(Boolean).join(" — ");
-  const delivery=order?.delivery_type==="office"
-    ? "مكتب DHD Express"+(order?.office_name?" — "+order.office_name:"")
-    : "إلى المنزل";
 
   return `مرحباً ${name}، شكراً لطلبك من Queen shop!
 
@@ -2015,7 +2047,6 @@ function buildWhatsAppOrderMessage(order){
 ${productLines}
 
 السعر الإجمالي: ${total} (شاملة التوصيل${location?" إلى "+location:""})
-طريقة التوصيل: ${delivery}
 
 لتأكيد طلبك وشحنه، يرجى الرد بـ 1.
 للإلغاء، رد بـ 2.`;
@@ -2053,24 +2084,77 @@ document.addEventListener("click", (ev)=>{
 }, true);
 
 function sendWhatsAppToAllVisibleOrders(){
-  const list=filteredOrders();
+  const list=selectedOrdersForBulk();
   if(!list.length){
-    alert("لا توجد طلبات ظاهرة لإرسال الرسائل.");
+    alert("لا توجد طلبات محددة أو ظاهرة لإرسال الرسائل.");
     return;
   }
-  if(!confirm("سيتم فتح محادثة واتساب لكل طلب ظاهر ("+list.length+"). ستظهر الرسالة جاهزة، ويجب الضغط على إرسال داخل واتساب لكل محادثة. متابعة؟")) return;
+  const usingSelection=SELECTED_ORDER_IDS.size>0;
+  if(!confirm("سيتم تجهيز واتساب لـ "+list.length+" "+(usingSelection?"زبوناً محدداً":"طلباً ظاهراً")+". ستظهر الرسالة جاهزة، ويجب الضغط على إرسال داخل واتساب لكل محادثة. متابعة؟")) return;
 
   let invalid=0;
-  // Open each chat separately. Some browsers may block multiple tabs;
-  // valid links are still prepared and the user can allow popups if needed.
   list.forEach((order,index)=>{
     const number=normalizeWhatsAppNumber(order?.phone);
     if(!number){ invalid++; return; }
     const url="https://wa.me/"+number+"?text="+encodeURIComponent(buildWhatsAppOrderMessage(order));
-    setTimeout(()=>window.open(url,"_blank","noopener,noreferrer"), index*350);
+    setTimeout(()=>window.open(url,"_blank","noopener,noreferrer"), index*450);
   });
-  if(invalid) setTimeout(()=>alert("تم تجهيز الرسائل، لكن "+invalid+" طلبات لا تحتوي على رقم جزائري صالح للواتساب."), 500);
-  else toast("تم تجهيز رسائل واتساب للطلبات الظاهرة ✓");
+  if(invalid) setTimeout(()=>alert("تم تجهيز الرسائل، لكن "+invalid+" طلبات لا تحتوي على رقم جزائري صالح للواتساب."), 700);
+  else toast("تم تجهيز رسائل واتساب للزبائن المحددين ✓");
+}
+
+function buildSMSOrderMessage(order){
+  const name=String(order?.customer_name||"").trim() || "زبوننا";
+  const items=ADMIN_ORDER_ITEMS[String(order?.id)] || ADMIN_ORDER_ITEMS[order?.id] || [];
+  const productLines=items.length
+    ? items.map(it=>{
+        const v=getOrderVariant(it);
+        const qty=it.quantity ?? it.qty ?? 1;
+        const extra=[];
+        if(v.color) extra.push("اللون: "+colorLabel(v.color));
+        if(v.size) extra.push("المقاس: "+v.size);
+        return v.name+" × "+qty+(extra.length?" ("+extra.join(" / ")+")":"");
+      }).join("؛ ")
+    : "تفاصيل الطلب غير محفوظة";
+  const total=money(order?.grand_total);
+  const wilaya=String(order?.wilaya_name||"").trim();
+  const commune=String(order?.commune||"").trim();
+  const location=[wilaya,commune].filter(Boolean).join(" — ");
+  return `مرحباً ${name}، شكراً لطلبك من Queen shop! الطلبية: ${productLines}. السعر الإجمالي: ${total} (شاملة التوصيل${location?" إلى "+location:""}). لتأكيد طلبك وشحنه، يرجى الرد بـ 1. للإلغاء، رد بـ 2.`;
+}
+
+function selectedOrdersForBulk(){
+  const selected=[...SELECTED_ORDER_IDS];
+  if(selected.length){
+    return ADMIN_ORDERS.filter(o=>selected.includes(String(o.id)));
+  }
+  return filteredOrders();
+}
+
+function sendSMSForOrder(order){
+  const phone=String(order?.phone||"").trim();
+  if(!phone) return false;
+  const body=buildSMSOrderMessage(order);
+  const url="sms:"+phone+"?body="+encodeURIComponent(body);
+  window.open(url,"_blank","noopener,noreferrer");
+  return true;
+}
+
+function sendSMSBulk(){
+  const list=selectedOrdersForBulk();
+  if(!list.length){
+    alert("لا توجد طلبات محددة أو ظاهرة لإرسال SMS.");
+    return;
+  }
+  if(!confirm("سيتم فتح تطبيق الرسائل لكل زبون ("+list.length+"). الرسالة ستكون جاهزة ويجب الضغط على «إرسال» لكل رسالة. متابعة؟")) return;
+
+  let invalid=0;
+  list.forEach((order,index)=>{
+    if(!String(order?.phone||"").trim()){ invalid++; return; }
+    setTimeout(()=>sendSMSForOrder(order), index*450);
+  });
+  if(invalid) setTimeout(()=>alert("تم تجهيز الرسائل، لكن "+invalid+" طلبات لا تحتوي على رقم هاتف."), 700);
+  else toast("تم تجهيز رسائل SMS للزبائن المحددين ✓");
 }
 
 function renderOrdersList(){
@@ -2201,6 +2285,7 @@ document.getElementById("ordersBulkDelete")?.addEventListener("click", async ()=
 });
 
 document.getElementById("ordersBulkWhatsApp")?.addEventListener("click", sendWhatsAppToAllVisibleOrders);
+document.getElementById("ordersBulkSMS")?.addEventListener("click", sendSMSBulk);
 
 document.getElementById("orderSearch")?.addEventListener("input", renderOrdersList);
 document.getElementById("orderStatusFilter")?.addEventListener("change", renderOrdersList);
