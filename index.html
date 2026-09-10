@@ -577,6 +577,19 @@ body.admin-open .bottom-bar{display:none!important}
 .color-image-hint{font-size:.7rem;color:#9aa0aa;line-height:1.6;margin-top:5px}
 </style>
 
+<style id="admin-image-manager-style">
+.admin-image-manager{display:grid;gap:10px;margin-top:9px}
+.admin-image-row{display:grid;grid-template-columns:68px minmax(0,1fr);gap:9px;align-items:center;padding:9px;border:1px solid rgba(255,255,255,.08);background:#0f1115;border-radius:12px}
+.admin-image-preview{width:68px;height:82px;object-fit:cover;border-radius:10px;background:#17191e;border:1px solid rgba(255,255,255,.14)}
+.admin-image-info{min-width:0}
+.admin-image-info strong{display:block;font-size:.76rem;color:#eee;margin-bottom:6px}
+.admin-image-actions{display:flex;gap:6px;flex-wrap:wrap}
+.admin-image-actions button{padding:7px 9px;border:0;border-radius:8px;background:#2a2f38;color:#eee;font-size:.65rem;font-weight:800;cursor:pointer}
+.admin-image-actions .replace{background:var(--gold);color:#0A0A0A}
+.admin-image-actions .remove{background:#5a1f28;color:#ffadb8}
+.admin-image-empty{padding:12px;border:1px dashed rgba(255,255,255,.12);border-radius:10px;color:#9aa0aa;font-size:.72rem;text-align:center}
+</style>
+
 <style id="order-product-images-style">
 .order-products-with-images{display:flex;flex-direction:column;gap:9px;margin-top:10px}
 .order-product-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(255,255,255,.07)}
@@ -909,7 +922,7 @@ body.admin-open .bottom-bar{display:none!important}
             <div class="field"><label>الوصف</label><textarea id="productDesc" rows="3"></textarea></div>
             <div class="field"><label>السعر (دج)</label><input id="productPrice" type="number" min="0" step="1" required></div>
             <div class="field"><label class="stock-toggle"><input id="productSoldOut" type="checkbox"><span><b>نفد المنتج</b><small>عند تفعيلها سيختفي المنتج تلقائياً من جهة الزبون، ويمكن إعادته لاحقاً.</small></span></label></div>
-            <div class="field"><label>الصور</label><input id="productImages" type="file" accept="image/*" multiple></div>
+            <div class="field"><label>الصور</label><input id="productImages" type="file" accept="image/*" multiple><div id="productImageManager" class="admin-image-manager"></div><div class="color-image-hint">يمكنك حذف أي صورة أو استبدالها بصورة جديدة، ثم الضغط على «حفظ». الصور التي لا تعدّل تبقى كما هي.</div></div>
             <div class="field"><label>الألوان المتوفرة وتدرجات كل لون</label><div class="palette" id="productColorPalette"></div></div>
             <div class="field" id="colorImagesField" hidden><label>تحديد لون كل صورة</label><div class="admin-color-images" id="productColorImages"></div><div class="color-image-hint">هنا تختارين لون كل صورة مباشرة. مثال: الصورة الأولى ← أسود، الصورة الثانية ← أبيض. عند اختيار الزبون للون ستظهر له الصورة التي ربطتها بهذا اللون.</div></div>
             <div class="field"><label>المقاسات</label><div class="size-palette" id="productSizePalette"></div></div>
@@ -2321,14 +2334,12 @@ function renderAdminColorImages(selected=[], existing={}, options=ADMIN_PRODUCT_
   ADMIN_COLOR_IMAGE_MAP={...(existing||{})};
   if(!options.length) return;
 
-  // Show every uploaded/existing image and let the admin assign its color.
   options.forEach((opt,i)=>{
     const assignedColor=selected.find(key=>String(ADMIN_COLOR_IMAGE_MAP[key]||"")===String(opt.value)) || "";
     const row=document.createElement("div");
     row.className="admin-color-image-row image-first";
     const preview=opt.src || (opt.value ? imageUrl(opt.value) : "");
     const colorOptions=`<option value="">بدون لون</option>` + selected.map(key=>{
-      const c=byKey[key];
       return `<option value="${escHtml(key)}" ${assignedColor===key?"selected":""}>${escHtml(colorLabel(key))}</option>`;
     }).join("");
     row.innerHTML=`
@@ -2336,9 +2347,12 @@ function renderAdminColorImages(selected=[], existing={}, options=ADMIN_PRODUCT_
       <div class="admin-color-image-info">
         <strong>الصورة ${i+1}${opt.name?" — "+escHtml(opt.name):""}</strong>
         <select class="admin-color-image-select" data-image-color>${colorOptions}</select>
+        <div class="admin-color-image-actions">
+          <label>تغيير اللون</label>
+          <button type="button" class="admin-color-image-clear">إزالة ربط اللون</button>
+        </div>
         <small class="color-image-name">${assignedColor?"مرتبطة بـ "+escHtml(colorLabel(assignedColor)):"اختاري اللون المطابق لهذه الصورة"}</small>
       </div>`;
-
     const select=row.querySelector("[data-image-color]");
     select.onchange=()=>{
       const oldColor=selected.find(key=>String(ADMIN_COLOR_IMAGE_MAP[key]||"")===String(opt.value));
@@ -2349,19 +2363,90 @@ function renderAdminColorImages(selected=[], existing={}, options=ADMIN_PRODUCT_
         ? "مرتبطة بـ "+colorLabel(newColor)
         : "اختاري اللون المطابق لهذه الصورة";
     };
+    row.querySelector(".admin-color-image-clear").onclick=()=>{
+      const oldColor=selected.find(key=>String(ADMIN_COLOR_IMAGE_MAP[key]||"")===String(opt.value));
+      if(oldColor) delete ADMIN_COLOR_IMAGE_MAP[oldColor];
+      select.value="";
+      row.querySelector(".color-image-name").textContent="اختاري اللون المطابق لهذه الصورة";
+    };
     host.appendChild(row);
   });
 }
 
 function getAdminColorImageMap(){ return {...ADMIN_COLOR_IMAGE_MAP}; }
-function setAdminProductImageOptions(filesOrPaths=[]){
-  // Revoke old object URLs before replacing them.
-  ADMIN_PRODUCT_IMAGE_OPTIONS.forEach(o=>{ if(o?.objectUrl) URL.revokeObjectURL(o.objectUrl); });
-  ADMIN_PRODUCT_IMAGE_OPTIONS=filesOrPaths.map((item,i)=>{
+function renderAdminProductImageManager(){
+  const host=document.getElementById("productImageManager");
+  if(!host) return;
+  host.innerHTML="";
+  if(!ADMIN_PRODUCT_IMAGE_OPTIONS.length){
+    host.innerHTML='<div class="admin-image-empty">لا توجد صور مضافة حالياً. أضيفي صوراً من الزر أعلاه.</div>';
+    return;
+  }
+  ADMIN_PRODUCT_IMAGE_OPTIONS.forEach((opt,i)=>{
+    const row=document.createElement("div");
+    row.className="admin-image-row";
+    const preview=opt.src || (opt.value?imageUrl(opt.value):"");
+    row.innerHTML=`
+      <img class="admin-image-preview" src="${preview?escHtml(preview):""}" alt="الصورة ${i+1}">
+      <div class="admin-image-info">
+        <strong>الصورة ${i+1}${opt.name?" — "+escHtml(opt.name):""}</strong>
+        <div class="admin-image-actions">
+          <button type="button" class="replace">استبدال الصورة</button>
+          <button type="button" class="remove">حذف الصورة</button>
+        </div>
+      </div>`;
+
+    row.querySelector(".remove").onclick=()=>{
+      const oldValue=opt.value;
+      Object.keys(ADMIN_COLOR_IMAGE_MAP).forEach(key=>{
+        if(String(ADMIN_COLOR_IMAGE_MAP[key]||"")===String(oldValue)) delete ADMIN_COLOR_IMAGE_MAP[key];
+      });
+      if(opt.objectUrl) URL.revokeObjectURL(opt.objectUrl);
+      ADMIN_PRODUCT_IMAGE_OPTIONS.splice(i,1);
+      renderAdminProductImageManager();
+      renderAdminColorImages(getAdminColors(),getAdminColorImageMap(),ADMIN_PRODUCT_IMAGE_OPTIONS);
+    };
+
+    row.querySelector(".replace").onclick=()=>{
+      const input=document.createElement("input");
+      input.type="file"; input.accept="image/*";
+      input.onchange=()=>{
+        const file=input.files?.[0];
+        if(!file) return;
+        const oldValue=opt.value;
+        const oldUrl=opt.objectUrl;
+        const objectUrl=URL.createObjectURL(file);
+        Object.keys(ADMIN_COLOR_IMAGE_MAP).forEach(key=>{
+          if(String(ADMIN_COLOR_IMAGE_MAP[key]||"")===String(oldValue)) ADMIN_COLOR_IMAGE_MAP[key]="__file_replace_"+i;
+        });
+        opt.value="__file_replace_"+i;
+        opt.src=objectUrl;
+        opt.file=file;
+        opt.fileIndex=null;
+        opt.name=file.name||"";
+        opt.objectUrl=objectUrl;
+        if(oldUrl) URL.revokeObjectURL(oldUrl);
+        renderAdminProductImageManager();
+        renderAdminColorImages(getAdminColors(),getAdminColorImageMap(),ADMIN_PRODUCT_IMAGE_OPTIONS);
+      };
+      input.click();
+    };
+    host.appendChild(row);
+  });
+}
+
+function setAdminProductImageOptions(filesOrPaths=[], append=false){
+  if(!append){
+    ADMIN_PRODUCT_IMAGE_OPTIONS.forEach(o=>{ if(o?.objectUrl) URL.revokeObjectURL(o.objectUrl); });
+    ADMIN_PRODUCT_IMAGE_OPTIONS=[];
+  }
+  const incoming=filesOrPaths.map((item,i)=>{
     if(typeof item === "string") return {value:item,label:"الصورة "+(i+1),src:imageUrl(item),fileIndex:null,name:""};
     const objectUrl=URL.createObjectURL(item);
-    return {value:"__file_"+i,label:"الصورة "+(i+1),src:objectUrl,fileIndex:i,name:item.name||"",objectUrl};
+    return {value:"__file_"+(Date.now())+"_"+i,label:"الصورة",src:objectUrl,fileIndex:null,name:item.name||"",objectUrl,file:item};
   });
+  ADMIN_PRODUCT_IMAGE_OPTIONS.push(...incoming);
+  renderAdminProductImageManager();
   renderAdminColorImages(getAdminColors(),getAdminColorImageMap(),ADMIN_PRODUCT_IMAGE_OPTIONS);
 }
 
@@ -2498,15 +2583,16 @@ document.getElementById("cancelEdit").onclick=()=>{
   ADMIN_COLOR_IMAGE_FILES.clear(); ADMIN_COLOR_IMAGE_MAP={};
   ADMIN_PRODUCT_IMAGE_OPTIONS.forEach(o=>{ if(o?.objectUrl) URL.revokeObjectURL(o.objectUrl); });
   ADMIN_PRODUCT_IMAGE_OPTIONS=[];
+  renderAdminProductImageManager();
   renderAdminPalette([]); renderAdminColorImages([],{},[]); renderAdminSizes([]);
   document.getElementById("saveProduct").textContent=t("حفظ","Enregistrer");
 };
 
 document.getElementById("productImages")?.addEventListener("change", e=>{
   const files=[...e.target.files];
-  ADMIN_COLOR_IMAGE_MAP={};
-  ADMIN_COLOR_IMAGE_FILES.clear();
-  setAdminProductImageOptions(files);
+  if(!files.length) return;
+  setAdminProductImageOptions(files,true);
+  e.target.value="";
 });
 
 document.getElementById("productForm").addEventListener("submit", async e=>{
@@ -2519,25 +2605,32 @@ document.getElementById("productForm").addEventListener("submit", async e=>{
       throw new Error(t("انتهت جلسة الإدارة. سجّلي الدخول مرة أخرى.","Session expirée. Veuillez vous reconnecter."));
     }
     const id=document.getElementById("editId").value.trim();
-    const files=[...document.getElementById("productImages").files];
-    let paths=[];
-    if(files.length) paths=await uploadImages(files);
     const selectedAdminColors=getAdminColors();
     const colorImageMap=getAdminColorImageMap();
-    for(const [key,file] of ADMIN_COLOR_IMAGE_FILES.entries()){
-      const uploaded=await uploadImages([file]);
-      if(uploaded[0]) colorImageMap[key]=uploaded[0];
+    const finalOptions=[];
+    const oldPaths=ADMIN_PRODUCT_IMAGE_OPTIONS.filter(o=>typeof o.value==="string" && !String(o.value).startsWith("__file_")).map(o=>o.value);
+    const replacedOrNew=[];
+    for(let i=0;i<ADMIN_PRODUCT_IMAGE_OPTIONS.length;i++){
+      const opt=ADMIN_PRODUCT_IMAGE_OPTIONS[i];
+      if(opt.file){
+        const uploaded=await uploadImages([opt.file]);
+        if(!uploaded[0]) throw new Error("تعذر رفع إحدى الصور");
+        const oldValue=opt.value;
+        const newPath=uploaded[0];
+        Object.keys(colorImageMap).forEach(key=>{
+          if(String(colorImageMap[key]||"")===String(oldValue)) colorImageMap[key]=newPath;
+        });
+        finalOptions.push(newPath);
+        replacedOrNew.push(newPath);
+      }else if(opt.value){
+        finalOptions.push(opt.value);
+      }
     }
-    Object.keys(colorImageMap).forEach(key=>{ if(!selectedAdminColors.includes(key)) delete colorImageMap[key]; });
-    // If the admin selected one of the main product images, convert its temporary
-    // __file_N value to the actual uploaded Supabase path after upload.
-    if(paths.length){
-      Object.keys(colorImageMap).forEach(key=>{
-        const m=String(colorImageMap[key]).match(/^__file_(\d+)$/);
-        if(m && paths[Number(m[1])]) colorImageMap[key]=paths[Number(m[1])];
-        else if(m) delete colorImageMap[key];
-      });
-    }
+    Object.keys(colorImageMap).forEach(key=>{
+      if(!selectedAdminColors.includes(key)) delete colorImageMap[key];
+      else if(!finalOptions.includes(String(colorImageMap[key]||""))) delete colorImageMap[key];
+    });
+    const paths=finalOptions;
 
     const baseDesc=document.getElementById("productDesc").value.trim();
     const encodedColorImages=encodeColorImages(colorImageMap);
@@ -2550,7 +2643,7 @@ document.getElementById("productForm").addEventListener("submit", async e=>{
       sizes:getAdminSizes(),
       active:!document.getElementById("productSoldOut").checked
     };
-    if(paths.length) body.image_paths=paths;
+    body.image_paths=paths;
     if(!body.name) throw new Error(t("أدخلي اسم المنتج","Nom requis"));
     if(!id && !paths.length) throw new Error(t("أضيفي صورة","Image requise"));
     const url=id?TABLE_URL+"?id=eq."+encodeURIComponent(id):TABLE_URL;
@@ -2561,6 +2654,17 @@ document.getElementById("productForm").addEventListener("submit", async e=>{
     });
     const text=await r.text();
     if(!r.ok) throw new Error(text||"خطأ");
+    // Best-effort cleanup: remove old storage objects that are no longer used.
+    if(id){
+      const removed=oldPaths.filter(path=>!paths.includes(path));
+      for(const path of removed){
+        try{
+          await fetch(SUPABASE_URL+"/storage/v1/object/"+BUCKET+"/"+path,{
+            method:"DELETE",headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+accessToken}
+          });
+        }catch(_){ /* DB update already succeeded; storage cleanup is non-blocking. */ }
+      }
+    }
     document.getElementById("cancelEdit").click();
     await refreshAdminList(); await loadProducts();
     err.style.color="#86efac"; err.textContent=t("تم الحفظ ✓","Enregistré ✓");
