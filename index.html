@@ -580,13 +580,17 @@ body.admin-open .bottom-bar{display:none!important}
 <style id="admin-image-manager-style">
 .admin-image-manager{display:grid;gap:10px;margin-top:9px}
 .admin-image-row{display:grid;grid-template-columns:68px minmax(0,1fr);gap:9px;align-items:center;padding:9px;border:1px solid rgba(255,255,255,.08);background:#0f1115;border-radius:12px}
-.admin-image-preview{width:68px;height:82px;object-fit:cover;border-radius:10px;background:#17191e;border:1px solid rgba(255,255,255,.14)}
+.admin-image-row.is-hidden-from-customer{opacity:.78;border-color:rgba(239,68,68,.35);background:#161012}
+.admin-image-preview{width:68px;height:82px;object-fit:cover;border-radius:10px;background:#17191e;border:1px solid rgba(255,255,255,.14);position:relative}
 .admin-image-info{min-width:0}
 .admin-image-info strong{display:block;font-size:.76rem;color:#eee;margin-bottom:6px}
-.admin-image-actions{display:flex;gap:6px;flex-wrap:wrap}
+.admin-image-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .admin-image-actions button{padding:7px 9px;border:0;border-radius:8px;background:#2a2f38;color:#eee;font-size:.65rem;font-weight:800;cursor:pointer}
 .admin-image-actions .replace{background:var(--gold);color:#0A0A0A}
 .admin-image-actions .remove{background:#5a1f28;color:#ffadb8}
+.admin-image-actions .hide-toggle{background:#2a2f38;color:#eee;display:inline-flex;align-items:center;gap:5px}
+.admin-image-actions .hide-toggle.is-on{background:rgba(239,68,68,.22);color:#fca5a5}
+.admin-image-hidden-badge{display:inline-block;margin-top:4px;padding:2px 7px;border-radius:999px;font-size:.62rem;font-weight:900;background:rgba(239,68,68,.18);color:#fca5a5}
 .admin-image-empty{padding:12px;border:1px dashed rgba(255,255,255,.12);border-radius:10px;color:#9aa0aa;font-size:.72rem;text-align:center}
 </style>
 
@@ -922,7 +926,7 @@ body.admin-open .bottom-bar{display:none!important}
             <div class="field"><label>الوصف</label><textarea id="productDesc" rows="3"></textarea></div>
             <div class="field"><label>السعر (دج)</label><input id="productPrice" type="number" min="0" step="1" required></div>
             <div class="field"><label class="stock-toggle"><input id="productSoldOut" type="checkbox"><span><b>نفد المنتج</b><small>عند تفعيلها سيختفي المنتج تلقائياً من جهة الزبون، ويمكن إعادته لاحقاً.</small></span></label></div>
-            <div class="field"><label>الصور</label><input id="productImages" type="file" accept="image/*" multiple><div id="productImageManager" class="admin-image-manager"></div><div class="color-image-hint">يمكنك حذف أي صورة أو استبدالها بصورة جديدة، ثم الضغط على «حفظ». الصور التي لا تعدّل تبقى كما هي.</div></div>
+            <div class="field"><label>الصور</label><input id="productImages" type="file" accept="image/*" multiple><div id="productImageManager" class="admin-image-manager"></div><div class="color-image-hint">يمكنك حذف أي صورة أو استبدالها بصورة جديدة، أو إخفاء صورة معيّنة عن الزبون دون حذفها من الإدارة. الصور المخفية تبقى ظاهرة لكِ فقط ولا تظهر في المتجر.</div></div>
             <div class="field"><label>الألوان المتوفرة وتدرجات كل لون</label><div class="palette" id="productColorPalette"></div></div>
             <div class="field" id="colorImagesField" hidden><label>تحديد لون كل صورة</label><div class="admin-color-images" id="productColorImages"></div><div class="color-image-hint">هنا تختارين لون كل صورة مباشرة. مثال: الصورة الأولى ← أسود، الصورة الثانية ← أبيض. عند اختيار الزبون للون ستظهر له الصورة التي ربطتها بهذا اللون.</div></div>
             <div class="field"><label>المقاسات</label><div class="size-palette" id="productSizePalette"></div></div>
@@ -1173,18 +1177,38 @@ function decodeColorImages(raw){
 function encodeColorImages(map){
   try{ return btoa(unescape(encodeURIComponent(JSON.stringify(map||{})))); }catch(_){ return ""; }
 }
+function decodeHiddenImages(raw){
+  try{
+    const m=String(raw||"").match(/\[QS_HIDDEN_IMAGES_B64:([^\]]+)\]/i);
+    if(!m) return [];
+    const json=decodeURIComponent(escape(atob(m[1])));
+    const arr=JSON.parse(json);
+    return Array.isArray(arr) ? arr.map(String).filter(Boolean) : [];
+  }catch(_){ return []; }
+}
+function encodeHiddenImages(list){
+  try{
+    const arr=[...new Set((list||[]).map(String).filter(Boolean))];
+    if(!arr.length) return "";
+    return btoa(unescape(encodeURIComponent(JSON.stringify(arr))));
+  }catch(_){ return ""; }
+}
 function cleanDesc(s){
-  return String(s||"").replace(/<?-?\s*QS_SIZES\s*:[^>]*>?/gi,"").replace(/--\s*QS_SIZES\s*:[^\n]*/gi,"").replace(/\[QS_COLOR_IMAGES_B64:[^\]]+\]/gi,"").replace(/\s{2,}/g," ").trim();
+  return String(s||"").replace(/<?-?\s*QS_SIZES\s*:[^>]*>?/gi,"").replace(/--\s*QS_SIZES\s*:[^\n]*/gi,"").replace(/\[QS_COLOR_IMAGES_B64:[^\]]+\]/gi,"").replace(/\[QS_HIDDEN_IMAGES_B64:[^\]]+\]/gi,"").replace(/\s{2,}/g," ").trim();
 }
 function normalizeProduct(p){
   const paths = Array.isArray(p.image_paths)&&p.image_paths.length ? p.image_paths : (p.image_url?[p.image_url]:[]);
   let sizes = normSizes(p.sizes);
   const descRaw = p.description||"";
+  const hiddenPaths = new Set(decodeHiddenImages(descRaw).map(String));
+  const visiblePaths = paths.filter(path => !hiddenPaths.has(String(path)));
   const rawColorImages=decodeColorImages(descRaw);
   const colorImages={};
   Object.keys(rawColorImages||{}).forEach(key=>{
     const v=rawColorImages[key];
-    if(v) colorImages[key]=imageUrl(v);
+    if(!v) return;
+    if(hiddenPaths.has(String(v))) return;
+    colorImages[key]=imageUrl(v);
   });
   const m = descRaw.match(/QS_SIZES\s*:\s*([A-Za-z0-9,\s]+)/i);
   if(m) sizes = [...new Set(sizes.concat(normSizes(m[1].split(","))))];
@@ -1192,7 +1216,7 @@ function normalizeProduct(p){
     id:p.id, name:p.name||"منتج", color:p.color||"", active:p.active!==false,
     desc:cleanDesc(descRaw), price:money(p.price),
     priceNum:Number(p.price)||0,
-    images:paths.map(imageUrl).filter(Boolean),
+    images:visiblePaths.map(imageUrl).filter(Boolean),
     sizes, availableColors:normColors(p), colorImages
   };
 }
@@ -2384,17 +2408,25 @@ function renderAdminProductImageManager(){
   }
   ADMIN_PRODUCT_IMAGE_OPTIONS.forEach((opt,i)=>{
     const row=document.createElement("div");
-    row.className="admin-image-row";
+    row.className="admin-image-row"+(opt.hidden?" is-hidden-from-customer":"");
     const preview=opt.src || (opt.value?imageUrl(opt.value):"");
     row.innerHTML=`
       <img class="admin-image-preview" src="${preview?escHtml(preview):""}" alt="الصورة ${i+1}">
       <div class="admin-image-info">
         <strong>الصورة ${i+1}${opt.name?" — "+escHtml(opt.name):""}</strong>
+        ${opt.hidden?`<span class="admin-image-hidden-badge">مخفية عن الزبون</span>`:""}
         <div class="admin-image-actions">
+          <button type="button" class="hide-toggle ${opt.hidden?"is-on":""}">${opt.hidden?"إظهار للزبون":"إخفاء عن الزبون"}</button>
           <button type="button" class="replace">استبدال الصورة</button>
           <button type="button" class="remove">حذف الصورة</button>
         </div>
       </div>`;
+
+    row.querySelector(".hide-toggle").onclick=()=>{
+      opt.hidden = !opt.hidden;
+      renderAdminProductImageManager();
+      renderAdminColorImages(getAdminColors(),getAdminColorImageMap(),ADMIN_PRODUCT_IMAGE_OPTIONS);
+    };
 
     row.querySelector(".remove").onclick=()=>{
       const oldValue=opt.value;
@@ -2415,6 +2447,7 @@ function renderAdminProductImageManager(){
         if(!file) return;
         const oldValue=opt.value;
         const oldUrl=opt.objectUrl;
+        const wasHidden=!!opt.hidden;
         const objectUrl=URL.createObjectURL(file);
         Object.keys(ADMIN_COLOR_IMAGE_MAP).forEach(key=>{
           if(String(ADMIN_COLOR_IMAGE_MAP[key]||"")===String(oldValue)) ADMIN_COLOR_IMAGE_MAP[key]="__file_replace_"+i;
@@ -2425,6 +2458,7 @@ function renderAdminProductImageManager(){
         opt.fileIndex=null;
         opt.name=file.name||"";
         opt.objectUrl=objectUrl;
+        opt.hidden=wasHidden;
         if(oldUrl) URL.revokeObjectURL(oldUrl);
         renderAdminProductImageManager();
         renderAdminColorImages(getAdminColors(),getAdminColorImageMap(),ADMIN_PRODUCT_IMAGE_OPTIONS);
@@ -2435,15 +2469,18 @@ function renderAdminProductImageManager(){
   });
 }
 
-function setAdminProductImageOptions(filesOrPaths=[], append=false){
+function setAdminProductImageOptions(filesOrPaths=[], append=false, hiddenPaths=[]){
   if(!append){
     ADMIN_PRODUCT_IMAGE_OPTIONS.forEach(o=>{ if(o?.objectUrl) URL.revokeObjectURL(o.objectUrl); });
     ADMIN_PRODUCT_IMAGE_OPTIONS=[];
   }
+  const hiddenSet=new Set((hiddenPaths||[]).map(String));
   const incoming=filesOrPaths.map((item,i)=>{
-    if(typeof item === "string") return {value:item,label:"الصورة "+(i+1),src:imageUrl(item),fileIndex:null,name:""};
+    if(typeof item === "string"){
+      return {value:item,label:"الصورة "+(i+1),src:imageUrl(item),fileIndex:null,name:"",hidden:hiddenSet.has(String(item))};
+    }
     const objectUrl=URL.createObjectURL(item);
-    return {value:"__file_"+(Date.now())+"_"+i,label:"الصورة",src:objectUrl,fileIndex:null,name:item.name||"",objectUrl,file:item};
+    return {value:"__file_"+(Date.now())+"_"+i,label:"الصورة",src:objectUrl,fileIndex:null,name:item.name||"",objectUrl,file:item,hidden:false};
   });
   ADMIN_PRODUCT_IMAGE_OPTIONS.push(...incoming);
   renderAdminProductImageManager();
@@ -2546,7 +2583,8 @@ async function refreshAdminList(){
         document.getElementById("productSoldOut").checked = row.active===false;
         ADMIN_COLOR_IMAGE_FILES.clear();
         const existingPaths=Array.isArray(row.image_paths)?row.image_paths:[];
-        setAdminProductImageOptions(existingPaths);
+        const hiddenPaths=decodeHiddenImages(row.description||"");
+        setAdminProductImageOptions(existingPaths, false, hiddenPaths);
         renderAdminPalette(normColors(row));
         renderAdminColorImages(normColors(row),decodeColorImages(row.description||""),ADMIN_PRODUCT_IMAGE_OPTIONS);
         renderAdminSizes(normSizes(row.sizes));
@@ -2608,6 +2646,7 @@ document.getElementById("productForm").addEventListener("submit", async e=>{
     const selectedAdminColors=getAdminColors();
     const colorImageMap=getAdminColorImageMap();
     const finalOptions=[];
+    const hiddenFinal=[];
     const oldPaths=ADMIN_PRODUCT_IMAGE_OPTIONS.filter(o=>typeof o.value==="string" && !String(o.value).startsWith("__file_")).map(o=>o.value);
     const replacedOrNew=[];
     for(let i=0;i<ADMIN_PRODUCT_IMAGE_OPTIONS.length;i++){
@@ -2621,9 +2660,11 @@ document.getElementById("productForm").addEventListener("submit", async e=>{
           if(String(colorImageMap[key]||"")===String(oldValue)) colorImageMap[key]=newPath;
         });
         finalOptions.push(newPath);
+        if(opt.hidden) hiddenFinal.push(newPath);
         replacedOrNew.push(newPath);
       }else if(opt.value){
         finalOptions.push(opt.value);
+        if(opt.hidden) hiddenFinal.push(opt.value);
       }
     }
     Object.keys(colorImageMap).forEach(key=>{
@@ -2634,10 +2675,14 @@ document.getElementById("productForm").addEventListener("submit", async e=>{
 
     const baseDesc=document.getElementById("productDesc").value.trim();
     const encodedColorImages=encodeColorImages(colorImageMap);
+    const encodedHidden=encodeHiddenImages(hiddenFinal);
+    let description=baseDesc;
+    if(encodedColorImages) description += `\n[QS_COLOR_IMAGES_B64:${encodedColorImages}]`;
+    if(encodedHidden) description += `\n[QS_HIDDEN_IMAGES_B64:${encodedHidden}]`;
     const body={
       name:document.getElementById("productName").value.trim(),
       color:document.getElementById("productColor").value.trim(),
-      description:baseDesc + (encodedColorImages ? `\n[QS_COLOR_IMAGES_B64:${encodedColorImages}]` : ""),
+      description,
       price:Number(document.getElementById("productPrice").value)||0,
       available_colors:selectedAdminColors,
       sizes:getAdminSizes(),
