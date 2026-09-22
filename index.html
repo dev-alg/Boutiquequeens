@@ -506,12 +506,26 @@ a{color:inherit;text-decoration:none}
 .palette input{display:none}
 .size-palette{display:flex;flex-wrap:wrap;gap:6px}
 .size-palette label{
-  min-width:40px;height:36px;padding:0 8px;border-radius:10px;
-  border:1px solid rgba(185,146,59,.5);display:grid;place-items:center;
+  width:58px;height:42px;min-width:58px;box-sizing:border-box;
+  padding:0;border-radius:9px;
+  border:1px solid rgba(185,146,59,.5);
+  display:flex;align-items:center;justify-content:center;
+  text-align:center;line-height:1;direction:ltr;
   font-weight:800;font-size:.8rem;cursor:pointer;color:#eee;
+}
+.size-palette label span{
+  display:flex;align-items:center;justify-content:center;
+  width:100%;height:100%;text-align:center;
 }
 .size-palette label.selected{background:var(--gold);color:#0A0A0A}
 .size-palette input{display:none}
+.admin-size-group{margin-bottom:12px}
+.admin-size-group:last-child{margin-bottom:0}
+.admin-size-group-title{
+  color:#9aa0aa;font-size:.7rem;font-weight:800;
+  margin:2px 0 7px;
+}
+.admin-size-group .size-palette{gap:6px}
 
 body.admin-open{overflow:hidden}
 body.admin-open .bottom-bar{display:none!important}
@@ -929,7 +943,7 @@ body.admin-open .bottom-bar{display:none!important}
             <div class="field"><label>الصور</label><input id="productImages" type="file" accept="image/*" multiple><div id="productImageManager" class="admin-image-manager"></div><div class="color-image-hint">يمكنك حذف أي صورة أو استبدالها بصورة جديدة، أو إخفاء صورة معيّنة عن الزبون دون حذفها من الإدارة. الصور المخفية تبقى ظاهرة لكِ فقط ولا تظهر في المتجر.</div></div>
             <div class="field"><label>الألوان المتوفرة وتدرجات كل لون</label><div class="palette" id="productColorPalette"></div></div>
             <div class="field" id="colorImagesField" hidden><label>تحديد لون كل صورة</label><div class="admin-color-images" id="productColorImages"></div><div class="color-image-hint">هنا تختارين لون كل صورة مباشرة. مثال: الصورة الأولى ← أسود، الصورة الثانية ← أبيض. عند اختيار الزبون للون ستظهر له الصورة التي ربطتها بهذا اللون.</div></div>
-            <div class="field"><label>المقاسات</label><div class="size-palette" id="productSizePalette"></div></div>
+            <div class="field"><label>المقاسات المتوفرة — بالحروف أو بالأرقام (32–50)</label><div id="productSizePalette"></div><div class="color-image-hint">يمكنك تفعيل أي مقاسات لهذا اللباس، سواء بالحروف أو بالأرقام من 32 إلى 50. الزبون سيختار المقاس المتوفر قبل إضافة المنتج للسلة.</div></div>
             <div class="admin-actions">
               <button class="pri" type="submit" id="saveProduct">حفظ</button>
               <button class="sec" type="button" id="cancelEdit">مسح</button>
@@ -984,7 +998,9 @@ const SUPABASE_KEY = "sb_publishable_cKWCau9aqBSOJRpZc8QsZQ_kRVgYdnN";
 const TABLE_URL = SUPABASE_URL + "/rest/v1/products";
 const BUCKET = "product-images";
 const FORMSPREE_ENDPOINTS = ["https://formspree.io/f/mbgjlqrr", "https://formspree.io/f/xppzdaaz"];
-const SIZES = ["S","M","L","XL","2XL","3XL","4XL"];
+const LETTER_SIZES = ["S","M","L","XL","2XL","3XL","4XL"];
+const NUMBER_SIZES = Array.from({length:19}, (_,i)=>String(32+i));
+const SIZES = [...LETTER_SIZES, ...NUMBER_SIZES];
 // لوحة ألوان موسعة للملابس والأقمشة، وتشمل اللون العنابي الظاهر في الصورة.
 const COLOR_PALETTE = [
   ["black","#0A0A0A","أسود","Noir"],["charcoal","#36454F","فحمي","Anthracite"],
@@ -2502,13 +2518,26 @@ function renderAdminPalette(selected=[]){
 function renderAdminSizes(selected=[]){
   const host=document.getElementById("productSizePalette"); if(!host) return;
   host.innerHTML="";
-  SIZES.forEach(sz=>{
-    const l=document.createElement("label");
-    l.className=selected.includes(sz)?"selected":"";
-    l.innerHTML=`<input type="checkbox" value="${sz}" ${selected.includes(sz)?"checked":""}><span>${sz}</span>`;
-    l.onclick=()=>setTimeout(()=>l.classList.toggle("selected",l.querySelector("input").checked),0);
-    host.appendChild(l);
-  });
+
+  const renderGroup=(title, list)=>{
+    const group=document.createElement("div");
+    group.className="admin-size-group";
+    group.innerHTML=`<div class="admin-size-group-title">${title}</div>`;
+    const palette=document.createElement("div");
+    palette.className="size-palette";
+    list.forEach(sz=>{
+      const l=document.createElement("label");
+      l.className=selected.includes(sz)?"selected":"";
+      l.innerHTML=`<input type="checkbox" value="${sz}" ${selected.includes(sz)?"checked":""}><span>${sz}</span>`;
+      l.onclick=()=>setTimeout(()=>l.classList.toggle("selected",l.querySelector("input").checked),0);
+      palette.appendChild(l);
+    });
+    group.appendChild(palette);
+    host.appendChild(group);
+  };
+
+  renderGroup("المقاسات بالحروف", LETTER_SIZES);
+  renderGroup("المقاسات بالأرقام — 32 إلى 50", NUMBER_SIZES);
 }
 function getAdminColors(){ return [...document.querySelectorAll("#productColorPalette input:checked")].map(i=>i.value); }
 function getAdminSizes(){ return [...document.querySelectorAll("#productSizePalette input:checked")].map(i=>i.value); }
