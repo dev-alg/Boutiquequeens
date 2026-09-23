@@ -1001,80 +1001,29 @@ const FORMSPREE_ENDPOINTS = ["https://formspree.io/f/mbgjlqrr", "https://formspr
 const LETTER_SIZES = ["S","M","L","XL","2XL","3XL","4XL"];
 const NUMBER_SIZES = Array.from({length:19}, (_,i)=>String(32+i));
 const SIZES = [...LETTER_SIZES, ...NUMBER_SIZES];
-// لوحة ألوان موسعة للملابس والأقمشة، وتشمل اللون العنابي الظاهر في الصورة.
+// لوحة ألوان موحّدة للملابس (القائمة المعتمدة فقط — بدون تدرجات إضافية).
 const COLOR_PALETTE = [
-  ["black","#0A0A0A","أسود","Noir"],["charcoal","#36454F","فحمي","Anthracite"],
-  ["white","#FFFFFF","أبيض","Blanc"],["ivory","#FFFFF0","عاجي","Ivoire"],
-  ["off-white","#F5F1E8","أوف وايت","Blanc cassé"],["gray-light","#D3D3D3","رمادي فاتح","Gris clair"],
-  ["gray","#9E9E9E","رمادي","Gris"],["gray-dark","#555555","رمادي غامق","Gris foncé"],
-  ["silver","#C0C0C0","فضي","Argent"],["beige","#D9C2A3","بيج","Beige"],
-  ["sand","#C2B280","رملي","Sable"],["camel","#C19A6B","جملي","Chameau"],
-  ["cream","#FFF4D6","كريمي","Crème"],["taupe","#8B7D6B","توبي","Taupe"],
-  ["brown-light","#A67B5B","بني فاتح","Marron clair"],["brown","#6F4E37","بني","Marron"],
-  ["chocolate","#3B2417","شوكولا","Chocolat"],["coffee","#4B3621","قهوة","Café"],
-  ["navy","#0B1F3A","كحلي","Bleu marine"],["blue-dark","#003366","أزرق داكن","Bleu foncé"],
-  ["blue","#1565C0","أزرق","Bleu"],["royal-blue","#4169E1","أزرق ملكي","Bleu roi"],
-  ["denim","#3B5B92","جينز","Denim"],["sky","#5BC0EB","سماوي","Bleu ciel"],
-  ["turquoise","#20B2AA","تركواز","Turquoise"],["teal","#00796B","بترولي مخضر","Sarcelle"],
-  ["mint","#98D8C8","نعناعي","Menthe"],["green-light","#81C784","أخضر فاتح","Vert clair"],
-  ["green","#2E7D32","أخضر","Vert"],["emerald","#008C7A","زمردي","Émeraude"],
-  ["olive","#6B7A1E","زيتي","Olive"],["khaki","#BDB76B","كاكي","Kaki"],
-  ["yellow","#FDD835","أصفر","Jaune"],["mustard","#C99700","خردلي","Moutarde"],
-  ["gold","#D4AF37","ذهبي","Doré"],["orange","#FF9800","برتقالي","Orange"],
-  ["coral","#FF7F50","مرجاني","Corail"],["peach","#FFCBA4","خوخي","Pêche"],
-  ["red-light","#EF5350","أحمر فاتح","Rouge clair"],["red","#C62828","أحمر","Rouge"],
-  ["scarlet","#FF2400","قرمزي","Écarlate"],["brick","#A43A3A","طوبي","Brique"],
-  ["wine","#7A0019","نبيذي","Bordeaux"],
-  ["burgundy","#650A18","عنابي غامق","Bordeaux foncé"],
-  ["burgundy-fabric","#6F0B1A","عنابي القماش (لون الصورة)","Bordeaux tissu (photo)"],
-  ["maroon","#800000","ماروني","Grenat"],
-  ["rose-light","#F8BBD0","وردي فاتح","Rose clair"],["pink","#EC407A","وردي","Rose"],
-  ["fuchsia","#C2185B","فوشيا","Fuchsia"],["magenta","#D0006F","ماجنتا","Magenta"],
-  ["purple-light","#CE93D8","بنفسجي فاتح","Violet clair"],
-  ["lilac","#B39DDB","ليلكي","Lilas"],["lavender","#E6E6FA","لافندر","Lavande"],
-  ["mauve","#9C6ADE","موف","Mauve"],["purple","#7B1FA2","بنفسجي","Violet"],
-  ["plum","#6A1B9A","برقوقي","Prune"]
+  ["black","#0A0A0A","الأسود","Noir"],
+  ["red","#C62828","الأحمر","Rouge"],
+  ["blue","#1565C0","الأزرق","Bleu"],
+  ["yellow","#FDD835","الأصفر","Jaune"],
+  ["green","#2E7D32","الأخضر","Vert"],
+  ["purple","#7B1FA2","البنفسجي","Violet"],
+  ["orange","#FF9800","البرتقالي","Orange"],
+  ["pink","#EC407A","الوردي (أو الروز)","Rose"],
+  ["brown","#6F4E37","البني","Marron"],
+  ["gray","#9E9E9E","الرمادي","Gris"],
+  ["beige","#D9C2A3","البيج","Beige"],
+  ["navy","#0B1F3A","أزرق غامق","Bleu marine"],
+  ["olive","#6B7A1E","الزيتي","Olive"],
+  ["fuchsia","#C2185B","الفوشيا","Fuchsia"],
+  ["burgundy","#7A0019","البوردو (أو العنابي)","Bordeaux"]
 ];
-// إضافة تدرجات تلقائية لكل لون: فاتح، متوسط، غامق.
-// يتم الإبقاء على اللون الأصلي أيضاً لضمان توافق المنتجات القديمة.
 function hexToRgb(hex){
   const h=String(hex||"").replace("#","").trim();
   const n=parseInt(h.length===3?h.split("").map(c=>c+c).join(""):h,16);
   return {r:(n>>16)&255,g:(n>>8)&255,b:n&255};
 }
-function rgbToHex(r,g,b){
-  return "#"+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,"0")).join("").toUpperCase();
-}
-function mixHex(hex,target,amount){
-  const a=hexToRgb(hex), t=hexToRgb(target);
-  return rgbToHex(
-    a.r+(t.r-a.r)*amount,
-    a.g+(t.g-a.g)*amount,
-    a.b+(t.b-a.b)*amount
-  );
-}
-function shadeLabelAr(name,shade){
-  return shade==="light" ? `${name} فاتح` : shade==="medium" ? `${name} متوسط` : `${name} غامق`;
-}
-function shadeLabelFr(name,shade){
-  return shade==="light" ? `${name} clair` : shade==="medium" ? `${name} moyen` : `${name} foncé`;
-}
-const BASE_COLOR_PALETTE = COLOR_PALETTE.slice();
-const COLOR_SHADES = [
-  ["light", "#FFFFFF", .52],
-  ["medium", "#FFFFFF", .12],
-  ["dark", "#000000", .35]
-];
-COLOR_PALETTE.push(
-  ...BASE_COLOR_PALETTE.flatMap(([key,hex,ar,fr]) =>
-    COLOR_SHADES.map(([shade,target,amount]) => [
-      `${key}-${shade}`,
-      mixHex(hex,target,amount),
-      shadeLabelAr(ar,shade),
-      shadeLabelFr(fr,shade)
-    ])
-  )
-);
 
 const byKey = Object.fromEntries(COLOR_PALETTE.map(x=>[x[0],{key:x[0],hex:x[1],ar:x[2],fr:x[3]}]));
 const LIGHT = new Set(COLOR_PALETTE.filter(x=>{
