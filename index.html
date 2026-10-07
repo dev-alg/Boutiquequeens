@@ -1,6 +1,22 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;
+s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}
+(window, document,'script','https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '1591137365592808');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=1591137365592808&ev=PageView&noscript=1"/></noscript>
+<!-- End Meta Pixel Code -->
+
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0A0A0A">
@@ -1199,6 +1215,7 @@ function updateCartUI(){
   else bar.hidden=true;
 }
 function addToCart(prod, color, size){
+  try{ if(typeof fbq==='function') fbq('track','AddToCart',{content_ids:[String(prod.id)],content_name:String(prod.name||''),content_type:'product',value:Number(prod.price)||0,currency:'DZD'}); }catch(_){}
   const found=cart.find(i=>i.id===prod.id && (i.selectedColor||"")===(color||"") && (i.selectedSize||"")===(size||""));
   if(found) found.qty++;
   else cart.push({
@@ -1286,6 +1303,7 @@ async function loadProducts(){
 
 /* Detail */
 function openDetail(prod){
+  try{ if(typeof fbq==='function') fbq('track','ViewContent',{content_ids:[String(prod.id)],content_name:String(prod.name||''),content_type:'product',value:Number(prod.price)||0,currency:'DZD'}); }catch(_){}
   detailProduct=prod; selectedColor=null; selectedSize=null; imgIndex=0;
   document.getElementById("detailImage").src=prod.images[0]||"";
   document.getElementById("detailName").textContent=prod.name;
@@ -1357,6 +1375,7 @@ document.getElementById("detailAdd").onclick=()=>{
 
 /* Cart sheet */
 function openCart(){
+  try{ if(cart.length && typeof fbq==='function') fbq('track','InitiateCheckout',{content_ids:cart.map(i=>String(i.id)),content_type:'product',num_items:cart.reduce((n,i)=>n+Number(i.qty||0),0),value:cart.reduce((n,i)=>n+Number(i.price||0)*Number(i.qty||0),0),currency:'DZD'}); }catch(_){}
   renderCart();
   document.getElementById("cartOverlay").classList.add("open");
 }
@@ -1449,6 +1468,7 @@ document.getElementById("c").onchange=()=>{updateTotals();updateOffices();};
 document.getElementById("deliveryType").onchange=()=>{updateTotals();updateOffices();};
 
 function showOrderSuccess(){
+  try{ if(typeof fbq==='function') fbq('track','Purchase',{content_ids:cart.map(i=>String(i.id)),content_type:'product',num_items:cart.reduce((n,i)=>n+Number(i.qty||0),0),value:cart.reduce((n,i)=>n+Number(i.price||0)*Number(i.qty||0),0),currency:'DZD'}); }catch(_){}
   const ov=document.getElementById("orderSuccessOverlay");
   if(!ov) return;
   ov.classList.add("open");
