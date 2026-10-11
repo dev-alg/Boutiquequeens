@@ -803,13 +803,14 @@ body.admin-open .bottom-bar{display:none!important}
       <div class="detail-desc" id="detailDesc"></div>
       <div id="colorBlock" hidden>
         <div class="opt-label" id="colorLabel">اللون</div>
+        <div id="colorHint" style="font-size:.76rem;color:var(--muted);margin:-3px 0 9px">اختاري لونًا واحدًا للمنتج.</div>
         <div class="colors" id="detailColors"></div>
       </div>
       <div id="sizeBlock" hidden>
         <div class="opt-label" id="sizeLabel">المقاس</div>
-        <div id="sizeHint" style="font-size:.76rem;color:var(--muted);margin:-3px 0 9px">يمكنك اختيار أكثر من مقاس، واضغط على المقاس مرة أخرى لإلغاء اختياره.</div>
         <div class="sizes" id="detailSizes"></div>
       </div>
+      <div id="partsBlock" hidden style="margin-top:14px"><div class="opt-label">اختيار مقاس كل جزء</div><div id="detailParts" style="display:grid;gap:12px"></div></div>
     </div>
     <div class="detail-foot">
       <strong class="price" id="detailPrice"></strong>
@@ -961,6 +962,7 @@ body.admin-open .bottom-bar{display:none!important}
             <div class="field"><label>الألوان المتوفرة وتدرجات كل لون</label><div class="palette" id="productColorPalette"></div></div>
             <div class="field" id="colorImagesField" hidden><label>تحديد لون كل صورة</label><div class="admin-color-images" id="productColorImages"></div><div class="color-image-hint">هنا تختارين لون كل صورة مباشرة. مثال: الصورة الأولى ← أسود، الصورة الثانية ← أبيض. عند اختيار الزبون للون ستظهر له الصورة التي ربطتها بهذا اللون.</div></div>
             <div class="field"><label>المقاسات المتوفرة — بالحروف أو بالأرقام (32–50)</label><div id="productSizePalette"></div><div class="color-image-hint">يمكنك تفعيل أي مقاسات لهذا اللباس، سواء بالحروف أو بالأرقام من 32 إلى 50. الزبون سيختار المقاس المتوفر قبل إضافة المنتج للسلة.</div></div>
+            <div class="field"><label class="stock-toggle"><input id="productIsComposite" type="checkbox"><span><b>المنتج مكوّن من جزأين أو أكثر</b><small>مثال: طقم من قطعتين بسعر واحد. سيختار الزبون مقاس كل جزء، بينما يختار لونًا واحدًا للطقم.</small></span></label><div id="productPartsEditor" hidden style="gap:10px;margin-top:10px"></div><button class="sec" type="button" id="addProductPart" style="margin-top:8px" hidden>＋ إضافة جزء</button></div>
             <div class="admin-actions">
               <button class="pri" type="submit" id="saveProduct">حفظ</button>
               <button class="sec" type="button" id="cancelEdit">مسح</button>
@@ -1055,8 +1057,9 @@ let cart = JSON.parse(localStorage.getItem("queen_cart_v2")||"[]");
 let accessToken = localStorage.getItem("queen_admin_token")||"";
 let refreshToken = localStorage.getItem("queen_admin_refresh")||"";
 let detailProduct = null;
-let selectedColor = null;
+let selectedColors = [];
 let selectedSizes = [];
+let selectedPartSizes = {};
 let imgIndex = 0;
 
 function t(ar,fr){ return lang==="fr" ? fr : ar; }
@@ -1176,8 +1179,18 @@ function encodeHiddenImages(list){
     return btoa(unescape(encodeURIComponent(JSON.stringify(arr))));
   }catch(_){ return ""; }
 }
+function encodeProductParts(parts){
+  try{return btoa(unescape(encodeURIComponent(JSON.stringify(parts||[]))));}catch(_){return "";}
+}
+function decodeProductParts(raw){
+  try{
+    const m=String(raw||"").match(/\[QS_PARTS_B64:([^\]]+)\]/i); if(!m)return [];
+    const arr=JSON.parse(decodeURIComponent(escape(atob(m[1]))));
+    return Array.isArray(arr)?arr.filter(x=>x&&String(x.name||"").trim()&&Array.isArray(x.sizes)&&x.sizes.length).map(x=>({name:String(x.name).trim(),sizes:x.sizes.map(String)})):[];
+  }catch(_){return [];}
+}
 function cleanDesc(s){
-  return String(s||"").replace(/<?-?\s*QS_SIZES\s*:[^>]*>?/gi,"").replace(/--\s*QS_SIZES\s*:[^\n]*/gi,"").replace(/\[QS_COLOR_IMAGES_B64:[^\]]+\]/gi,"").replace(/\[QS_HIDDEN_IMAGES_B64:[^\]]+\]/gi,"").replace(/\s{2,}/g," ").trim();
+  return String(s||"").replace(/<?-?\s*QS_SIZES\s*:[^>]*>?/gi,"").replace(/--\s*QS_SIZES\s*:[^\n]*/gi,"").replace(/\[QS_COLOR_IMAGES_B64:[^\]]+\]/gi,"").replace(/\[QS_HIDDEN_IMAGES_B64:[^\]]+\]/gi,"").replace(/\[QS_PARTS_B64:[^\]]+\]/gi,"").replace(/\s{2,}/g," ").trim();
 }
 function normalizeProduct(p){
   const paths = Array.isArray(p.image_paths)&&p.image_paths.length ? p.image_paths : (p.image_url?[p.image_url]:[]);
@@ -1200,7 +1213,7 @@ function normalizeProduct(p){
     desc:cleanDesc(descRaw), price:money(p.price),
     priceNum:Number(p.price)||0,
     images:visiblePaths.map(imageUrl).filter(Boolean),
-    sizes, availableColors:normColors(p), colorImages
+    sizes, availableColors:normColors(p), colorImages, parts:decodeProductParts(descRaw)
   };
 }
 
@@ -1215,13 +1228,14 @@ function updateCartUI(){
   if(n>0){ bar.hidden=false; document.getElementById("barTotal").textContent=money(subtotal()); }
   else bar.hidden=true;
 }
-function addToCart(prod, color, size){
+function addToCart(prod, color, size, partSizes={}){
   try{ if(typeof fbq==='function') fbq('track','AddToCart',{content_ids:[String(prod.id)],content_name:String(prod.name||''),content_type:'product',value:Number(prod.price)||0,currency:'DZD'}); }catch(_){}
-  const found=cart.find(i=>i.id===prod.id && (i.selectedColor||"")===(color||"") && (i.selectedSize||"")===(size||""));
+  const partsKey=JSON.stringify(partSizes||{});
+  const found=cart.find(i=>i.id===prod.id && (i.selectedColor||"")===(color||"") && (i.selectedSize||"")===(size||"") && JSON.stringify(i.selectedPartSizes||{})===partsKey);
   if(found) found.qty++;
   else cart.push({
     id:prod.id, name:prod.name, price:prod.price, qty:1,
-    image:(color && prod.colorImages && prod.colorImages[color]) || prod.images[0]||"", selectedColor:color||"", selectedSize:size||""
+    image:(color && prod.colorImages && prod.colorImages[color]) || prod.images[0]||"", selectedColor:color||"", selectedSize:size||"", selectedPartSizes:{...(partSizes||{})}, partNames:(prod.parts||[]).map(p=>p.name)
   });
   saveCart(); updateCartUI(); toast(t("تمت الإضافة إلى السلة ✓","Ajouté au panier ✓"));
 }
@@ -1305,7 +1319,7 @@ async function loadProducts(){
 /* Detail */
 function openDetail(prod){
   try{ if(typeof fbq==='function') fbq('track','ViewContent',{content_ids:[String(prod.id)],content_name:String(prod.name||''),content_type:'product',value:Number(prod.price)||0,currency:'DZD'}); }catch(_){}
-  detailProduct=prod; selectedColor=null; selectedSizes=[]; imgIndex=0;
+  detailProduct=prod; selectedColors=[]; selectedSizes=[]; selectedPartSizes={}; imgIndex=0;
   document.getElementById("detailImage").src=prod.images[0]||"";
   document.getElementById("detailName").textContent=prod.name;
   document.getElementById("detailCat").textContent=prod.color||t("منتج","Produit");
@@ -1322,13 +1336,13 @@ function openDetail(prod){
       const b=document.createElement("button");
       b.type="button"; b.className="color-dot"+(LIGHT.has(key)?" light":"");
       b.style.background=c.hex; b.title=colorLabel(key);
+      b.setAttribute("aria-pressed","false");
       b.onclick=()=>{
-        selectedColor=key;
-        colorHost.querySelectorAll(".color-dot").forEach(x=>x.classList.remove("selected"));
-        b.classList.add("selected");
+        selectedColors=[key];
+        colorHost.querySelectorAll(".color-dot").forEach(dot=>{dot.classList.remove("selected");dot.setAttribute("aria-pressed","false");});
+        b.classList.add("selected"); b.setAttribute("aria-pressed","true");
         const colorImage=detailProduct.colorImages && detailProduct.colorImages[key];
-        document.getElementById("detailImage").src=colorImage || detailProduct.images[0] || "";
-        imgIndex=0;
+        document.getElementById("detailImage").src=colorImage || detailProduct.images[0] || ""; imgIndex=0;
       };
       colorHost.appendChild(b);
     });
@@ -1336,27 +1350,30 @@ function openDetail(prod){
 
   const sizeBlock=document.getElementById("sizeBlock");
   const sizeHost=document.getElementById("detailSizes");
-  if(prod.sizes.length){
-    sizeBlock.hidden=false; sizeHost.innerHTML="";
-    prod.sizes.forEach(sz=>{
-      const b=document.createElement("button");
-      b.type="button"; b.className="size-btn"; b.textContent=sz;
-      b.setAttribute("aria-pressed","false");
-      b.onclick=()=>{
-        const index=selectedSizes.indexOf(sz);
-        if(index>=0){
-          selectedSizes.splice(index,1);
-          b.classList.remove("selected");
-          b.setAttribute("aria-pressed","false");
-        }else{
-          selectedSizes.push(sz);
-          b.classList.add("selected");
-          b.setAttribute("aria-pressed","true");
-        }
-      };
-      sizeHost.appendChild(b);
+  const partsBlock=document.getElementById("partsBlock");
+  const partsHost=document.getElementById("detailParts");
+  if(prod.parts && prod.parts.length){
+    sizeBlock.hidden=true; partsBlock.hidden=false; partsHost.innerHTML="";
+    prod.parts.forEach((part,index)=>{
+      const wrap=document.createElement("div"); wrap.style.cssText="border:1px solid var(--line);border-radius:12px;padding:10px";
+      const label=document.createElement("div"); label.className="opt-label"; label.style.marginBottom="8px"; label.textContent=part.name; wrap.appendChild(label);
+      const select=document.createElement("select"); select.style.cssText="width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:#fff;color:#222;font:inherit";
+      const placeholder=document.createElement("option"); placeholder.value=""; placeholder.textContent=t("اختاري المقاس","Choisir la taille"); select.appendChild(placeholder);
+      part.sizes.forEach(sz=>{const o=document.createElement("option");o.value=sz;o.textContent=sz;select.appendChild(o);});
+      select.value=""; select.onchange=()=>{if(select.value)selectedPartSizes[index]=select.value;else delete selectedPartSizes[index];};
+      wrap.appendChild(select); partsHost.appendChild(wrap);
     });
-  } else sizeBlock.hidden=true;
+  }else{
+    partsBlock.hidden=true;
+    if(prod.sizes.length){
+      sizeBlock.hidden=false; sizeHost.innerHTML="";
+      prod.sizes.forEach(sz=>{
+        const b=document.createElement("button"); b.type="button"; b.className="size-btn"; b.textContent=sz; b.setAttribute("aria-pressed","false");
+        b.onclick=()=>{selectedSizes=[sz];sizeHost.querySelectorAll(".size-btn").forEach(x=>{x.classList.remove("selected");x.setAttribute("aria-pressed","false");});b.classList.add("selected");b.setAttribute("aria-pressed","true");};
+        sizeHost.appendChild(b);
+      });
+    }else sizeBlock.hidden=true;
+  }
 
   document.getElementById("detailOverlay").classList.add("open");
 }
@@ -1371,14 +1388,16 @@ document.getElementById("detailImage").onclick=()=>{
 };
 document.getElementById("detailAdd").onclick=()=>{
   if(!detailProduct) return;
-  if(detailProduct.availableColors.length && !selectedColor){
-    alert(t("من فضلك اختاري اللون أولاً","Veuillez choisir une couleur")); return;
+  if(detailProduct.availableColors.length && !selectedColors.length){alert(t("من فضلك اختاري لونًا واحدًا","Veuillez choisir une couleur"));return;}
+  if(detailProduct.parts && detailProduct.parts.length){
+    const missing=detailProduct.parts.findIndex((part,index)=>!selectedPartSizes[index]);
+    if(missing>=0){alert(t("من فضلك اختاري مقاس: "+detailProduct.parts[missing].name,"Veuillez choisir la taille : "+detailProduct.parts[missing].name));return;}
+    const partsSummary=detailProduct.parts.map((part,index)=>part.name+": "+selectedPartSizes[index]).join("، ");
+    addToCart(detailProduct,selectedColors[0]||"",partsSummary,selectedPartSizes);
+  }else{
+    if(detailProduct.sizes.length && !selectedSizes.length){alert(t("من فضلك اختاري مقاسًا واحدًا","Veuillez choisir une taille"));return;}
+    addToCart(detailProduct,selectedColors[0]||"",selectedSizes[0]||"",{});
   }
-  if(detailProduct.sizes.length && !selectedSizes.length){
-    alert(t("من فضلك اختاري مقاساً واحداً على الأقل","Veuillez choisir au moins une taille")); return;
-  }
-  const sizesToAdd=detailProduct.sizes.length ? [...selectedSizes] : [""];
-  sizesToAdd.forEach(size=>addToCart(detailProduct, selectedColor||"", size));
   document.getElementById("detailAdd").textContent=t("تمت الإضافة ✓","Ajouté ✓");
   setTimeout(()=>document.getElementById("detailAdd").textContent=t("أضف إلى السلة","Ajouter au panier"),900);
 };
@@ -1406,7 +1425,8 @@ function renderCart(){
   cart.forEach((item,idx)=>{
     const el=document.createElement("div");
     el.className="cart-item";
-    const meta=[item.selectedColor?colorLabel(item.selectedColor):"", item.selectedSize?("المقاس: "+item.selectedSize):""].filter(Boolean).join(" · ");
+    const partMeta=item.selectedPartSizes?Object.entries(item.selectedPartSizes).map(([idx,sz])=>((item.partNames&&item.partNames[idx])||("الجزء "+(Number(idx)+1))+": "+sz)).join("، "):"";
+    const meta=[item.selectedColor?"اللون: "+colorLabel(item.selectedColor):"", item.selectedSize?(item.selectedPartSizes?item.selectedSize:("المقاس: "+item.selectedSize)):""].filter(Boolean).join(" · ");
     el.innerHTML=`
       <img src="${item.image}" alt="">
       <div>
@@ -2498,6 +2518,23 @@ function setAdminProductImageOptions(filesOrPaths=[], append=false, hiddenPaths=
   renderAdminColorImages(getAdminColors(),getAdminColorImageMap(),ADMIN_PRODUCT_IMAGE_OPTIONS);
 }
 
+function getPartSizeChoices(){return [...LETTER_SIZES,...NUMBER_SIZES];}
+function addAdminPart(data={name:"",sizes:[]}){
+  const host=document.getElementById("productPartsEditor"); if(!host)return;
+  const card=document.createElement("div"); card.className="admin-card"; card.style.padding="12px";
+  const title=document.createElement("div"); title.style.cssText="display:flex;gap:8px;align-items:center;margin-bottom:8px";
+  const name=document.createElement("input"); name.type="text"; name.placeholder="اسم الجزء، مثل: البنطال"; name.value=data.name||""; name.style.flex="1";
+  const remove=document.createElement("button"); remove.type="button"; remove.className="sec"; remove.textContent="حذف الجزء"; remove.onclick=()=>{card.remove();updatePartButtons();};
+  title.append(name,remove); card.appendChild(title);
+  const note=document.createElement("small"); note.className="color-image-hint"; note.textContent="حددي المقاسات المتوفرة لهذا الجزء فقط."; card.appendChild(note);
+  const palette=document.createElement("div"); palette.className="size-palette"; palette.style.marginTop="8px";
+  getPartSizeChoices().forEach(sz=>{const l=document.createElement("label");l.className=(data.sizes||[]).includes(sz)?"selected":"";l.innerHTML=`<input type="checkbox" value="${sz}" ${(data.sizes||[]).includes(sz)?"checked":""}><span>${sz}</span>`;l.onclick=()=>setTimeout(()=>l.classList.toggle("selected",l.querySelector("input").checked),0);palette.appendChild(l);});
+  card.appendChild(palette); card.dataset.part="true"; host.appendChild(card); updatePartButtons();
+}
+function updatePartButtons(){const enabled=document.getElementById("productIsComposite")?.checked;const host=document.getElementById("productPartsEditor");const btn=document.getElementById("addProductPart");if(host){host.hidden=!enabled;host.style.display=enabled?"grid":"none";}if(btn)btn.hidden=!enabled;}
+function getAdminParts(){return [...document.querySelectorAll('#productPartsEditor [data-part]')].map(card=>({name:card.querySelector('input[type="text"]').value.trim(),sizes:[...card.querySelectorAll('input[type="checkbox"]:checked')].map(i=>i.value)}));}
+function setAdminParts(parts=[]){const host=document.getElementById("productPartsEditor");if(host)host.innerHTML="";(parts.length?parts:[]).forEach(p=>addAdminPart(p));if(!parts.length&&document.getElementById("productIsComposite")?.checked){addAdminPart({name:"الجزء الأول",sizes:[]});addAdminPart({name:"الجزء الثاني",sizes:[]});}updatePartButtons();}
+
 function renderAdminPalette(selected=[]){
   const host=document.getElementById("productColorPalette"); if(!host) return;
   host.innerHTML="";
@@ -2603,6 +2640,8 @@ async function refreshAdminList(){
         document.getElementById("productName").value=row.name||"";
         document.getElementById("productColor").value=row.color||"";
         document.getElementById("productDesc").value=cleanDesc(row.description||"");
+        const existingParts=decodeProductParts(row.description||"");
+        document.getElementById("productIsComposite").checked=existingParts.length>0; setAdminParts(existingParts);
         document.getElementById("productPrice").value=row.price||0;
         document.getElementById("productSoldOut").checked = row.active===false;
         ADMIN_COLOR_IMAGE_FILES.clear();
@@ -2642,6 +2681,7 @@ document.getElementById("cancelEdit").onclick=()=>{
   document.getElementById("productForm").reset();
   document.getElementById("editId").value="";
   document.getElementById("productSoldOut").checked=false;
+  document.getElementById("productIsComposite").checked=false; setAdminParts([]); updatePartButtons();
   ADMIN_COLOR_IMAGE_FILES.clear(); ADMIN_COLOR_IMAGE_MAP={};
   ADMIN_PRODUCT_IMAGE_OPTIONS.forEach(o=>{ if(o?.objectUrl) URL.revokeObjectURL(o.objectUrl); });
   ADMIN_PRODUCT_IMAGE_OPTIONS=[];
@@ -2656,6 +2696,9 @@ document.getElementById("productImages")?.addEventListener("change", e=>{
   setAdminProductImageOptions(files,true);
   e.target.value="";
 });
+
+document.getElementById("productIsComposite")?.addEventListener("change",()=>{const on=document.getElementById("productIsComposite").checked;if(on&&!document.querySelector('#productPartsEditor [data-part]'))setAdminParts([{name:"الجزء الأول",sizes:[]},{name:"الجزء الثاني",sizes:[]}]);updatePartButtons();});
+document.getElementById("addProductPart")?.addEventListener("click",()=>addAdminPart({name:"",sizes:[]}));
 
 document.getElementById("productForm").addEventListener("submit", async e=>{
   e.preventDefault();
@@ -2698,18 +2741,23 @@ document.getElementById("productForm").addEventListener("submit", async e=>{
     const paths=finalOptions;
 
     const baseDesc=document.getElementById("productDesc").value.trim();
+    const isComposite=document.getElementById("productIsComposite").checked;
+    const productParts=isComposite?getAdminParts():[];
+    if(isComposite && (productParts.length<2 || productParts.some(part=>!part.name || !part.sizes.length))) throw new Error("أضيفي جزأين على الأقل، واكتبي اسم كل جزء وحددي مقاساته.");
+    const encodedParts=isComposite?encodeProductParts(productParts):"";
     const encodedColorImages=encodeColorImages(colorImageMap);
     const encodedHidden=encodeHiddenImages(hiddenFinal);
     let description=baseDesc;
     if(encodedColorImages) description += `\n[QS_COLOR_IMAGES_B64:${encodedColorImages}]`;
     if(encodedHidden) description += `\n[QS_HIDDEN_IMAGES_B64:${encodedHidden}]`;
+    if(encodedParts) description += `\n[QS_PARTS_B64:${encodedParts}]`;
     const body={
       name:document.getElementById("productName").value.trim(),
       color:document.getElementById("productColor").value.trim(),
       description,
       price:Number(document.getElementById("productPrice").value)||0,
       available_colors:selectedAdminColors,
-      sizes:getAdminSizes(),
+      sizes:isComposite?[]:getAdminSizes(),
       active:!document.getElementById("productSoldOut").checked
     };
     body.image_paths=paths;
