@@ -1557,7 +1557,7 @@ document.getElementById("checkoutForm").addEventListener("submit", async e=>{
     const confirmationToken = (crypto && typeof crypto.randomUUID === "function")
       ? crypto.randomUUID()
       : ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));
-    const order={customer_name:n,phone:p,address:a,wilaya_name:prov,commune,
+    const order={customer_name:n,phone:p,wilaya_name:prov,commune,
       delivery_type:type,office_name:office,products_total:productsTotal,
       delivery_price:fee,grand_total:total,status:"new",
       confirmation_token:confirmationToken};
@@ -1584,28 +1584,18 @@ document.getElementById("checkoutForm").addEventListener("submit", async e=>{
       };
     });
 
-    // Save the order directly so its private confirmation token is persisted.
-    // Run the SQL migration supplied with this file before enabling this feature.
-    const orderResponse=await fetch(ORDERS_URL,{
+    // Save order + items through a secure RPC (see supabase-fix.sql).
+    // This avoids "Prefer: return=representation" which requires public SELECT on orders (the cause of the RLS error).
+    order.address=a;
+    const orderResponse=await fetch(SUPABASE_URL+"/rest/v1/rpc/create_customer_order",{
       method:"POST",
-      headers:{...apiHeaders(""),"Prefer":"return=representation"},
-      body:JSON.stringify(order)
+      headers:apiHeaders(""),
+      body:JSON.stringify({p_order:order,p_items:items})
     });
-    const createdRows=await orderResponse.json().catch(()=>null);
-    if(!orderResponse.ok || !Array.isArray(createdRows) || !createdRows[0]?.id){
-      const detail=createdRows?.message||createdRows?.hint||JSON.stringify(createdRows||{});
-      throw new Error("تعذر حفظ الطلب. تأكدي من تنفيذ كود Supabase الخاص بتأكيد الطلبات. "+detail);
-    }
-    const createdOrder=createdRows[0];
-    const orderId=createdOrder.id;
-    const itemRows=items.map(it=>({...it,order_id:orderId}));
-    const itemsResponse=await fetch(ITEMS_URL,{
-      method:"POST",
-      headers:{...apiHeaders(""),"Prefer":"return=minimal"},
-      body:JSON.stringify(itemRows)
-    });
-    if(!itemsResponse.ok){
-      throw new Error("تم إنشاء الطلب لكن تعذر حفظ تفاصيل المنتجات: "+await itemsResponse.text());
+    const created=await orderResponse.json().catch(()=>null);
+    if(!orderResponse.ok || !created){
+      const detail=created?.message||created?.hint||JSON.stringify(created||{});
+      throw new Error("تعذر حفظ الطلب. "+detail);
     }
     const confirmationLink=location.origin+location.pathname+"?confirmOrder="+encodeURIComponent(confirmationToken);
     window.__lastOrderConfirmationLink=confirmationLink;
