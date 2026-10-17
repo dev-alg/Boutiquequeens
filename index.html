@@ -1554,9 +1554,13 @@ document.getElementById("checkoutForm").addEventListener("submit", async e=>{
     fd.set("الإجمالي",money(total));
 
     // First create the order in Supabase. Never report success if this fails.
+    const confirmationToken = (crypto && typeof crypto.randomUUID === "function")
+      ? crypto.randomUUID()
+      : ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));
     const order={customer_name:n,phone:p,address:a,wilaya_name:prov,commune,
       delivery_type:type,office_name:office,products_total:productsTotal,
-      delivery_price:fee,grand_total:total,status:"new"};
+      delivery_price:fee,grand_total:total,status:"new",
+      confirmation_token:confirmationToken};
     const items=cart.map(x=>{
       const colorKey=x.selectedColor||"";
       const colorHex=(colorKey && byKey[colorKey]) ? byKey[colorKey].hex : "";
@@ -1580,27 +1584,31 @@ document.getElementById("checkoutForm").addEventListener("submit", async e=>{
       };
     });
 
-    let saved=false, lastDbError="";
-    try{
-      const r=await fetch(SUPABASE_URL+"/rest/v1/rpc/submit_public_order",{
-        method:"POST",headers:apiHeaders(""),body:JSON.stringify({p_order:order,p_items:items})
-      });
-      if(r.ok) saved=true; else lastDbError=await r.text();
-    }catch(err){ lastDbError=err.message||String(err); }
-
-    // Fallback when the RPC is unavailable: insert order, then items.
-    if(!saved){
-      const r=await fetch(ORDERS_URL,{method:"POST",headers:{...apiHeaders(""),"Prefer":"return=representation"},body:JSON.stringify(order)});
-      const d=await r.json().catch(()=>null);
-      if(!r.ok || !Array.isArray(d) || !d[0]?.id) throw new Error(t("تعذر حفظ الطلب في قاعدة البيانات. ","Impossible d'enregistrer la commande. ")+lastDbError);
-      const orderId=d[0].id;
-      const itemRows=items.map(it=>({...it,order_id:orderId}));
-      const ir=await fetch(ITEMS_URL,{method:"POST",headers:{...apiHeaders(""),"Prefer":"return=minimal"},body:JSON.stringify(itemRows)});
-      if(!ir.ok) throw new Error(t("تم إنشاء الطلب لكن تعذر حفظ تفاصيل المنتجات: ","Commande créée mais détails produits non enregistrés: ")+await ir.text());
-      saved=true;
+    // Save the order directly so its private confirmation token is persisted.
+    // Run the SQL migration supplied with this file before enabling this feature.
+    const orderResponse=await fetch(ORDERS_URL,{
+      method:"POST",
+      headers:{...apiHeaders(""),"Prefer":"return=representation"},
+      body:JSON.stringify(order)
+    });
+    const createdRows=await orderResponse.json().catch(()=>null);
+    if(!orderResponse.ok || !Array.isArray(createdRows) || !createdRows[0]?.id){
+      const detail=createdRows?.message||createdRows?.hint||JSON.stringify(createdRows||{});
+      throw new Error("تعذر حفظ الطلب. تأكدي من تنفيذ كود Supabase الخاص بتأكيد الطلبات. "+detail);
     }
-
-    if(!saved) throw new Error(t("تعذر حفظ الطلب","Impossible d'enregistrer la commande"));
+    const createdOrder=createdRows[0];
+    const orderId=createdOrder.id;
+    const itemRows=items.map(it=>({...it,order_id:orderId}));
+    const itemsResponse=await fetch(ITEMS_URL,{
+      method:"POST",
+      headers:{...apiHeaders(""),"Prefer":"return=minimal"},
+      body:JSON.stringify(itemRows)
+    });
+    if(!itemsResponse.ok){
+      throw new Error("تم إنشاء الطلب لكن تعذر حفظ تفاصيل المنتجات: "+await itemsResponse.text());
+    }
+    const confirmationLink=location.origin+location.pathname+"?confirmOrder="+encodeURIComponent(confirmationToken);
+    window.__lastOrderConfirmationLink=confirmationLink;
 
     // Notify both Formspree endpoints after database persistence. A notification failure never closes the site or cancels the saved order.
     const notificationResults = await Promise.allSettled(
@@ -1883,8 +1891,8 @@ document.querySelectorAll(".admin-tab").forEach(btn=>{
 
 /* Orders */
 const STATUS_AR = {
-  new:"جديد", confirmed:"مؤكد", shipped:"تم الشحن",
-  delivered:"تم التسليم", cancelled:"ملغى"
+  new:"جديد", confirmed:"مؤكدة", shipped:"تم الشحن",
+  delivered:"تم التسليم", cancelled:"ملغاة"
 };
 
 async function loadAdminOrders(){
@@ -2109,15 +2117,21 @@ function buildWhatsAppOrderMessage(order){
   const commune=String(order?.commune||"").trim();
   const location=[wilaya,commune].filter(Boolean).join(" — ");
 
-  return `مرحباً ${name}، شكراً لطلبك من Queen shop!
+  const confirmationLink=order?.confirmation_token
+    ? window.location.origin+window.location.pathname+"?confirmOrder="+encodeURIComponent(order.confirmation_token)
+    : "";
+  const actionText=confirmationLink
+    ? `\n\nيرجى تأكيد الطلب أو إلغاؤه عبر الرابط الخاص التالي:\n${confirmationLink}\n\nافتح الرابط ثم اختر «تأكيد الطلب» أو «إلغاء الطلب».`
+    : "\n\nيرجى التواصل معنا لتأكيد الطلب أو إلغائه؛ رابط التأكيد غير متوفر لهذا الطلب القديم.";
 
-الطلبية:
+  return `مرحباً ${name}، شكراً لطلبك من Queen Shop 🌸
+
+تفاصيل طلبك:
 ${productLines}
 
-السعر الإجمالي: ${total} (شاملة التوصيل${location?" إلى "+location:""})
+السعر الإجمالي: ${total} (شامل التوصيل${location?" إلى "+location:""})${actionText}
 
-لتأكيد طلبك وشحنه، يرجى الرد بـ 1.
-للإلغاء، رد بـ 2.`;
+شكراً لثقتك بنا ❤️`;
 }
 
 function openWhatsAppForOrder(order){
@@ -2138,6 +2152,8 @@ function openWhatsAppForOrder(order){
 document.addEventListener("click", (ev)=>{
   const btn = ev.target.closest("[data-whatsapp]");
   if(!btn) return;
+  // The card renderer installs a direct click handler. Avoid opening WhatsApp twice.
+  if(typeof btn.onclick === "function") return;
   const card = btn.closest(".order-card");
   if(!card) return;
   const orderId = card.querySelector("[data-select-order]")?.closest("label")?.querySelector("input") ? null : null;
@@ -2293,7 +2309,8 @@ function renderOrdersList(){
           <option value="cancelled" ${st==="cancelled"?"selected":""}>ملغى</option>
         </select>
         <button type="button" data-save>تحديث الحالة</button>
-        <button type="button" class="admin-wa-btn" data-whatsapp style="display:inline-flex !important;visibility:visible !important;opacity:1 !important;position:relative;z-index:5;min-width:150px;justify-content:center;align-items:center;cursor:pointer;">💬 إرسال للزبون عبر واتساب</button>
+        <button type="button" class="admin-wa-btn" data-whatsapp style="display:inline-flex !important;visibility:visible !important;opacity:1 !important;position:relative;z-index:5;min-width:150px;justify-content:center;align-items:center;cursor:pointer;">📩 إرسال رسالة التأكيد عبر واتساب</button>
+        ${o.confirmation_token ? `<button type="button" data-copy-confirmation>🔗 نسخ رابط التأكيد</button>` : `<button type="button" data-no-confirmation title="هذا الطلب قديم أو لا يحتوي على رمز تأكيد">رابط التأكيد غير متاح</button>`}
         <button type="button" class="danger" data-delete>🗑 حذف الطلب</button>
       </div>`;
     const selectBox = card.querySelector("[data-select-order]");
@@ -2323,6 +2340,16 @@ function renderOrdersList(){
 
     card.querySelector("[data-whatsapp]").onclick = ()=>{
       openWhatsAppForOrder(o);
+    };
+    const copyConfirmationButton=card.querySelector("[data-copy-confirmation]");
+    if(copyConfirmationButton) copyConfirmationButton.onclick=async ()=>{
+      const link=location.origin+location.pathname+"?confirmOrder="+encodeURIComponent(o.confirmation_token);
+      try{
+        await navigator.clipboard.writeText(link);
+        toast("تم نسخ رابط التأكيد ✓ أرسليه للزبون عبر واتساب");
+      }catch(_){
+        window.prompt("انسخي رابط التأكيد وأرسليه للزبون:",link);
+      }
     };
 
     card.querySelector("[data-delete]").onclick = async ()=>{
@@ -2899,6 +2926,83 @@ document.addEventListener("DOMContentLoaded", ()=>{ initOrderImageViewer(); });
   });
   document.addEventListener('click',()=>setTimeout(syncWhatsApp,0), true);
   syncWhatsApp();
+})();
+</script>
+
+
+
+<!-- Customer order confirmation page; opened through ?confirmOrder=TOKEN -->
+<style id="customer-confirmation-style">
+#customerConfirmPage{display:none;position:fixed;inset:0;z-index:100000;background:#fafaf8;color:#0a0a0a;align-items:center;justify-content:center;padding:22px;font-family:system-ui,-apple-system,"Segoe UI",Tahoma,Arial,sans-serif}
+#customerConfirmPage .cc-card{width:100%;max-width:440px;background:#fff;border:1px solid rgba(185,146,59,.25);border-radius:24px;padding:28px 22px;text-align:center;box-shadow:0 15px 50px rgba(0,0,0,.08)}
+#customerConfirmPage .cc-mark{width:66px;height:66px;margin:0 auto 16px;border-radius:50%;display:grid;place-items:center;background:#fbf5e3;color:#b9923b;font-size:30px;font-weight:900}
+#customerConfirmPage h1{font-size:1.45rem;margin-bottom:10px}
+#customerConfirmPage p{color:#70685e;line-height:1.8;font-size:.92rem;margin-bottom:18px}
+#customerConfirmPage button{width:100%;border:0;border-radius:13px;padding:14px;margin-top:9px;font-weight:800;font-size:1rem;cursor:pointer}
+#ccConfirm{background:#15803d;color:#fff}#ccCancel{background:#fff0f0;color:#b91c1c;border:1px solid #fecaca!important}
+#ccMessage{min-height:24px;font-size:.84rem;margin-top:14px;color:#51483e}
+body.confirm-mode{padding:0!important;overflow:hidden!important}
+body.confirm-mode>#customerConfirmPage{display:flex!important}
+body.confirm-mode>*:not(#customerConfirmPage):not(script):not(style){display:none!important}
+</style>
+<div id="customerConfirmPage" aria-live="polite">
+  <div class="cc-card">
+    <div class="cc-mark">Q</div>
+    <h1>تأكيد طلبك — Queen Shop</h1>
+    <p id="ccDescription">يرجى اختيار تأكيد الطلب أو إلغائه.</p>
+    <button id="ccConfirm" type="button">✓ تأكيد الطلب</button>
+    <button id="ccCancel" type="button">✕ إلغاء الطلب</button>
+    <div id="ccMessage"></div>
+  </div>
+</div>
+<script id="customer-order-confirmation-script">
+(function(){
+  const params=new URLSearchParams(location.search);
+  const token=params.get("confirmOrder");
+  if(!token) return;
+  document.body.classList.add("confirm-mode");
+  const description=document.getElementById("ccDescription");
+  const message=document.getElementById("ccMessage");
+  const confirmBtn=document.getElementById("ccConfirm");
+  const cancelBtn=document.getElementById("ccCancel");
+  let busy=false;
+
+  async function choose(choice){
+    if(busy) return;
+    busy=true; confirmBtn.disabled=true; cancelBtn.disabled=true;
+    message.textContent="جارٍ تحديث حالة الطلب...";
+    try{
+      const response=await fetch(SUPABASE_URL+"/rest/v1/rpc/respond_to_order_confirmation",{
+        method:"POST",
+        headers:{"apikey":SUPABASE_KEY,"Authorization":"Bearer "+SUPABASE_KEY,"Content-Type":"application/json"},
+        body:JSON.stringify({p_token:token,p_choice:choice})
+      });
+      const result=await response.json().catch(()=>null);
+      if(!response.ok) throw new Error(result?.message||result?.details||"تعذر تحديث الطلب. يرجى التواصل مع المتجر.");
+      const status=typeof result==="string"?result:result?.status;
+      if(status==="confirmed"){
+        description.textContent="شكراً لك! تم تأكيد طلبك بنجاح.";
+        message.textContent="حالة الطلب: مؤكدة ✓";
+      }else if(status==="cancelled"){
+        description.textContent="تم تسجيل إلغاء طلبك.";
+        message.textContent="حالة الطلب: ملغاة";
+      }else if(status==="already_processed"){
+        description.textContent="تمت معالجة هذا الطلب مسبقاً.";
+        message.textContent="إذا كنتِ بحاجة إلى تعديل، تواصلي مع المتجر.";
+      }else{
+        description.textContent="لم يتم العثور على طلب صالح بهذا الرابط، أو تمت معالجته مسبقاً.";
+        message.textContent="يرجى التواصل مع Queen Shop عند الحاجة.";
+      }
+      confirmBtn.style.display="none"; cancelBtn.style.display="none";
+    }catch(err){
+      message.textContent=err.message||"حدث خطأ، حاولي مرة أخرى.";
+      busy=false; confirmBtn.disabled=false; cancelBtn.disabled=false;
+    }
+  }
+  confirmBtn.addEventListener("click",()=>choose("confirm"));
+  cancelBtn.addEventListener("click",()=>{
+    if(window.confirm("هل أنت متأكدة من إلغاء الطلب؟")) choose("cancel");
+  });
 })();
 </script>
 
