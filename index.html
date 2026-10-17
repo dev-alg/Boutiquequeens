@@ -741,6 +741,39 @@ body.admin-open .bottom-bar{display:none!important}
 .whatsapp-float.whatsapp-hidden-for-overlay{display:none !important;}
 </style>
 
+
+<style id="queen-category-filter-polish">
+/* Premium category filters: compact gold-and-black pills, mobile friendly */
+.category-filters{
+  display:flex; flex-wrap:nowrap; align-items:center; gap:10px;
+  width:100%; max-width:100%; margin:18px 0 22px; padding:5px 2px 10px;
+  overflow-x:auto; overflow-y:hidden; white-space:nowrap;
+  -webkit-overflow-scrolling:touch; scrollbar-width:none; direction:rtl;
+  scroll-snap-type:x proximity;
+}
+.category-filters::-webkit-scrollbar{display:none}
+.category-filters .category-filter{
+  appearance:none; -webkit-appearance:none; flex:0 0 auto; display:inline-flex;
+  align-items:center; justify-content:center; min-height:42px; padding:10px 20px;
+  border:1px solid #e4d8b7; border-radius:999px; background:#fff;
+  color:#29251d; font:700 14px/1.2 inherit; font-family:inherit;
+  cursor:pointer; white-space:nowrap; box-shadow:0 2px 8px rgba(30,24,12,.045);
+  transition:background .22s ease,color .22s ease,border-color .22s ease,transform .22s ease,box-shadow .22s ease;
+  scroll-snap-align:start; outline:none;
+}
+.category-filters .category-filter:hover{border-color:#b9953e; box-shadow:0 4px 12px rgba(185,149,62,.14); transform:translateY(-1px)}
+.category-filters .category-filter.active{
+  color:#e8c76e; background:#11100e; border-color:#11100e;
+  box-shadow:0 5px 14px rgba(17,16,14,.16);
+}
+.category-filters .category-filter:focus-visible{outline:2px solid #c5a34e; outline-offset:3px}
+@media(max-width:600px){
+  .category-filters{gap:8px;margin:15px 0 18px;padding:4px 1px 9px}
+  .category-filters .category-filter{min-height:40px;padding:9px 16px;font-size:13px}
+}
+@media(prefers-reduced-motion:reduce){.category-filters .category-filter{transition:none}}
+</style>
+
 </head>
 <body>
 
