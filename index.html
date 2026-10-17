@@ -772,6 +772,7 @@ body.admin-open .bottom-bar{display:none!important}
     <h2 id="productsTitle">منتجاتنا</h2>
     <span id="productsSub">اضغطي للتفاصيل</span>
   </div>
+  <div id="categoryFilters" class="category-filters" aria-label="تصنيفات المنتجات"></div>
   <div class="grid" id="grid">
     <div class="state-box"><div class="spinner"></div>جاري تحميل المنتجات...</div>
   </div>
@@ -954,7 +955,8 @@ body.admin-open .bottom-bar{display:none!important}
           <form id="productForm">
             <input type="hidden" id="editId">
             <div class="field"><label>اسم المنتج</label><input id="productName" required></div>
-            <div class="field"><label>ملاحظة / فئة</label><input id="productColor" placeholder="مثال: متوفر بعدة ألوان"></div>
+            <div class="field"><label>ملاحظة / فئة وصفية</label><input id="productColor" placeholder="مثال: متوفر بعدة ألوان"></div>
+            <div class="field"><label>تصنيف المنتج</label><select id="productCategory"><option value="">بدون تصنيف</option></select><small style="display:block;color:#9aa0aa;font-size:.7rem;margin-top:5px">اختاري تصنيفًا أنشأتِه مسبقًا من إعدادات الموقع.</small></div>
             <div class="field"><label>الوصف</label><textarea id="productDesc" rows="3"></textarea></div>
             <div class="field"><label>السعر (دج)</label><input id="productPrice" type="number" min="0" step="1" required></div>
             <div class="field"><label class="stock-toggle"><input id="productSoldOut" type="checkbox"><span><b>نفد المنتج</b><small>عند تفعيلها سيختفي المنتج تلقائياً من جهة الزبون، ويمكن إعادته لاحقاً.</small></span></label></div>
@@ -984,6 +986,11 @@ body.admin-open .bottom-bar{display:none!important}
           <div class="field"><label>عنوان المنتجات</label><input id="setProductsTitle" type="text" value="منتجاتنا"></div>
           <div class="field"><label>نص التذييل</label><textarea id="setFooter" rows="2"></textarea></div>
           <div class="field"><label>رابط إنستغرام</label><input id="setInstagram" type="url" value="https://www.instagram.com/boutique.queen_shop"></div>
+          <hr style="border:0;border-top:1px solid rgba(255,255,255,.1);margin:18px 0">
+          <h3 style="margin:0 0 8px">إدارة تصنيفات المنتجات</h3>
+          <p class="admin-muted">أضيفي التصنيفات هنا أولاً، ثم اختاري التصنيف المناسب عند إضافة كل منتج أو تعديله.</p>
+          <div class="field"><label>اسم التصنيف الجديد</label><div style="display:flex;gap:8px;align-items:stretch"><input id="newCategoryName" type="text" placeholder="مثال: فساتين" style="flex:1;min-width:0"><button class="pri" type="button" id="addCategoryBtn" style="white-space:nowrap">＋ إضافة</button></div></div>
+          <div id="settingsCategoriesList" class="admin-list"><p class="admin-muted">لا توجد تصنيفات بعد.</p></div>
           <div class="admin-actions">
             <button class="pri" type="button" id="saveSettings">حفظ الإعدادات</button>
           </div>
@@ -1059,6 +1066,7 @@ const LIGHT = new Set(COLOR_PALETTE.filter(x=>{
 
 let lang = localStorage.getItem("queen_lang") || "ar";
 let PRODUCTS = [];
+let activeCategory = "الكل";
 let cart = JSON.parse(localStorage.getItem("queen_cart_v2")||"[]");
 let accessToken = localStorage.getItem("queen_admin_token")||"";
 let refreshToken = localStorage.getItem("queen_admin_refresh")||"";
@@ -1195,8 +1203,12 @@ function decodeProductParts(raw){
     return Array.isArray(arr)?arr.filter(x=>x&&String(x.name||"").trim()&&Array.isArray(x.sizes)&&x.sizes.length).map(x=>({name:String(x.name).trim(),sizes:x.sizes.map(String)})):[];
   }catch(_){return [];}
 }
+function productCategoryFromDesc(s){
+  const m=String(s||"").match(/\[QS_CATEGORY:([^\]]*)\]/i);
+  try{return m?decodeURIComponent(m[1]):"";}catch(_){return m?m[1]:"";}
+}
 function cleanDesc(s){
-  return String(s||"").replace(/<?-?\s*QS_SIZES\s*:[^>]*>?/gi,"").replace(/--\s*QS_SIZES\s*:[^\n]*/gi,"").replace(/\[QS_COLOR_IMAGES_B64:[^\]]+\]/gi,"").replace(/\[QS_HIDDEN_IMAGES_B64:[^\]]+\]/gi,"").replace(/\[QS_PARTS_B64:[^\]]+\]/gi,"").replace(/\s{2,}/g," ").trim();
+  return String(s||"").replace(/\[QS_CATEGORY:[^\]]*\]/gi,"").replace(/<?-?\s*QS_SIZES\s*:[^>]*>?/gi,"").replace(/--\s*QS_SIZES\s*:[^\n]*/gi,"").replace(/\[QS_COLOR_IMAGES_B64:[^\]]+\]/gi,"").replace(/\[QS_HIDDEN_IMAGES_B64:[^\]]+\]/gi,"").replace(/\[QS_PARTS_B64:[^\]]+\]/gi,"").replace(/\s{2,}/g," ").trim();
 }
 function normalizeProduct(p){
   const paths = Array.isArray(p.image_paths)&&p.image_paths.length ? p.image_paths : (p.image_url?[p.image_url]:[]);
@@ -1215,7 +1227,7 @@ function normalizeProduct(p){
   const m = descRaw.match(/QS_SIZES\s*:\s*([A-Za-z0-9,\s]+)/i);
   if(m) sizes = [...new Set(sizes.concat(normSizes(m[1].split(","))))];
   return {
-    id:p.id, name:p.name||"منتج", color:p.color||"", active:p.active!==false,
+    id:p.id, name:p.name||"منتج", color:p.color||"", category:productCategoryFromDesc(descRaw), active:p.active!==false,
     desc:cleanDesc(descRaw), price:money(p.price),
     priceNum:Number(p.price)||0,
     images:visiblePaths.map(imageUrl).filter(Boolean),
@@ -1246,15 +1258,62 @@ function addToCart(prod, color, size, partSizes={}){
   saveCart(); updateCartUI(); toast(t("تمت الإضافة إلى السلة ✓","Ajouté au panier ✓"));
 }
 
+function getSavedCategories(){
+  try{const a=JSON.parse(localStorage.getItem("queen_product_categories")||"[]");return Array.isArray(a)?[...new Set(a.map(x=>String(x||"").trim()).filter(Boolean))]:[];}catch(_){return [];}
+}
+function saveCategoryList(list){
+  const clean=[...new Set((list||[]).map(x=>String(x||"").trim()).filter(Boolean))];
+  localStorage.setItem("queen_product_categories",JSON.stringify(clean));
+  renderSettingsCategories();renderProductCategorySelect();renderCategoryControls();
+}
+function renderProductCategorySelect(selected){
+  const sel=document.getElementById("productCategory");if(!sel)return;
+  const current=selected!==undefined?selected:sel.value;
+  const cats=getSavedCategories();
+  sel.innerHTML='<option value="">بدون تصنيف</option>'+cats.map(c=>`<option value="${escHtml(c)}">${escHtml(c)}</option>`).join("");
+  if(current&&cats.includes(current))sel.value=current;else sel.value="";
+}
+function renderSettingsCategories(){
+  const host=document.getElementById("settingsCategoriesList");if(!host)return;
+  const cats=getSavedCategories();
+  if(!cats.length){host.innerHTML='<p class="admin-muted">لا توجد تصنيفات بعد. أضيفي أول تصنيف من الحقل أعلاه.</p>';return;}
+  host.innerHTML=cats.map(c=>`<div class="admin-item"><div style="min-width:0"><strong>${escHtml(c)}</strong><small>تصنيف متاح للاختيار عند إضافة المنتجات</small></div><button type="button" class="chip" data-remove-category="${escHtml(c)}">حذف</button></div>`).join("");
+  host.querySelectorAll("[data-remove-category]").forEach(btn=>btn.onclick=()=>{
+    const cat=btn.getAttribute("data-remove-category");
+    if(!confirm(`حذف التصنيف «${cat}» من قائمة التصنيفات؟ المنتجات المحفوظة بهذا التصنيف لن تتغير تلقائياً.`))return;
+    saveCategoryList(getSavedCategories().filter(x=>x!==cat));
+  });
+}
+const addCategoryBtn=document.getElementById("addCategoryBtn");
+if(addCategoryBtn)addCategoryBtn.onclick=()=>{
+  const input=document.getElementById("newCategoryName"),name=(input.value||"").trim();
+  const msg=document.getElementById("settingsMsg");
+  if(!name){if(msg){msg.style.color="#ff8a9a";msg.textContent="اكتبي اسم التصنيف أولاً.";}return;}
+  const cats=getSavedCategories();
+  if(cats.some(c=>c.toLocaleLowerCase()===name.toLocaleLowerCase())){if(msg){msg.style.color="#ff8a9a";msg.textContent="هذا التصنيف موجود مسبقاً.";}return;}
+  saveCategoryList([...cats,name]);input.value="";
+  if(msg){msg.style.color="#86efac";msg.textContent="تمت إضافة التصنيف ✓";}
+};
+function allProductCategories(){return [...new Set(PRODUCTS.map(p=>String(p.category||"").trim()).filter(Boolean))];}
+function renderCategoryControls(){
+  const cats=allProductCategories();
+  const host=document.getElementById("categoryFilters"); if(!host)return;
+  if(activeCategory!=="الكل"&&!cats.includes(activeCategory)) activeCategory="الكل";
+  host.innerHTML=["الكل",...cats].map(cat=>`<button type="button" class="category-filter ${activeCategory===cat?"active":""}" data-category="${escHtml(cat)}">${escHtml(cat)}</button>`).join("");
+  host.querySelectorAll("[data-category]").forEach(btn=>btn.addEventListener("click",()=>{activeCategory=btn.dataset.category||"الكل";renderCategoryControls();render();}));
+  renderProductCategorySelect();
+}
 /* Render products */
 function render(){
+  renderCategoryControls();
   const grid=document.getElementById("grid");
   grid.innerHTML="";
-  if(!PRODUCTS.length){
+  const visibleProducts=activeCategory==="الكل"?PRODUCTS:PRODUCTS.filter(p=>(p.category||"")===activeCategory);
+  if(!visibleProducts.length){
     grid.innerHTML=`<div class="state-box">${t("لا توجد منتجات حالياً","Aucun produit pour le moment")}</div>`;
     return;
   }
-  PRODUCTS.forEach((prod,pi)=>{
+  visibleProducts.forEach((prod,pi)=>{
     const card=document.createElement("article");
     card.className="card";
     const many=prod.images.length>1;
@@ -2689,6 +2748,9 @@ async function refreshAdminList(){
         document.getElementById("editId").value=row.id;
         document.getElementById("productName").value=row.name||"";
         document.getElementById("productColor").value=row.color||"";
+        const rowCategory=productCategoryFromDesc(row.description||"");
+        if(rowCategory&&!getSavedCategories().includes(rowCategory))saveCategoryList([...getSavedCategories(),rowCategory]);
+        renderProductCategorySelect(rowCategory);
         document.getElementById("productDesc").value=cleanDesc(row.description||"");
         const existingParts=decodeProductParts(row.description||"");
         document.getElementById("productIsComposite").checked=existingParts.length>0; setAdminParts(existingParts);
@@ -2730,6 +2792,7 @@ async function refreshAdminList(){
 document.getElementById("cancelEdit").onclick=()=>{
   document.getElementById("productForm").reset();
   document.getElementById("editId").value="";
+  document.getElementById("productCategory").value="";
   document.getElementById("productSoldOut").checked=false;
   document.getElementById("productIsComposite").checked=false; setAdminParts([]); updatePartButtons();
   ADMIN_COLOR_IMAGE_FILES.clear(); ADMIN_COLOR_IMAGE_MAP={};
@@ -2798,6 +2861,8 @@ document.getElementById("productForm").addEventListener("submit", async e=>{
     const encodedColorImages=encodeColorImages(colorImageMap);
     const encodedHidden=encodeHiddenImages(hiddenFinal);
     let description=baseDesc;
+    const category=document.getElementById("productCategory").value.trim();
+    if(category) description += `\n[QS_CATEGORY:${encodeURIComponent(category)}]`;
     if(encodedColorImages) description += `\n[QS_COLOR_IMAGES_B64:${encodedColorImages}]`;
     if(encodedHidden) description += `\n[QS_HIDDEN_IMAGES_B64:${encodedHidden}]`;
     if(encodedParts) description += `\n[QS_PARTS_B64:${encodedParts}]`;
@@ -2842,6 +2907,11 @@ document.getElementById("productForm").addEventListener("submit", async e=>{
 /* Settings (local for now) */
 function loadSettingsForm(){
   try{
+    const savedCats=getSavedCategories();
+    const productCats=PRODUCTS.map(p=>String(p.category||"").trim()).filter(Boolean);
+    const migrated=[...new Set([...savedCats,...productCats])];
+    if(migrated.length!==savedCats.length || migrated.some((c,i)=>c!==savedCats[i])) localStorage.setItem("queen_product_categories",JSON.stringify(migrated));
+    renderSettingsCategories();renderProductCategorySelect();
     const s = JSON.parse(localStorage.getItem("queen_site_settings")||"{}");
     if(s.title) document.getElementById("setTitle").value = s.title;
     if(s.heroDesc) document.getElementById("setHeroDesc").value = s.heroDesc;
