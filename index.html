@@ -865,8 +865,9 @@ body.admin-open .bottom-bar{display:none!important}
     <div class="cart-list" id="cartItems"></div>
     <form class="checkout" id="checkoutForm" hidden>
       <h3 id="checkoutTitle">معلومات التوصيل</h3>
-      <div class="field"><label for="n">الاسم الكامل</label><input id="n" name="الاسم" required autocomplete="name"></div>
-      <div class="field"><label for="p">رقم الهاتف</label><input id="p" name="رقم الهاتف" type="tel" required inputmode="tel"></div>
+      <div class="field"><label for="n">الاسم واللقب</label><input id="n" name="الاسم واللقب" required autocomplete="name" minlength="5" placeholder="اكتب الاسم واللقب كاملين"></div>
+      <div class="field"><label for="p">رقم الهاتف</label><input id="p" name="رقم الهاتف" type="tel" required inputmode="tel" autocomplete="tel" placeholder="05 أو 06 أو 07xxxxxxxx"></div>
+      <div id="checkoutValidationMessage" role="alert" aria-live="polite" style="display:none;margin:8px 0 12px;padding:11px 13px;border:1px solid #e7b7b7;border-radius:12px;background:#fff3f3;color:#a32626;font-size:.82rem;line-height:1.7"></div>
       <div class="field"><label for="a">العنوان</label><input id="a" name="العنوان" required placeholder="الحي، الشارع"></div>
       <div class="field"><label for="c">الولاية</label><select id="c" name="الولاية" required><option value="">اختاري الولاية</option></select></div>
       <div class="field"><label for="commune">البلدية</label><input id="commune" name="البلدية" required></div>
@@ -1622,8 +1623,21 @@ document.getElementById("checkoutForm").addEventListener("submit", async e=>{
   try{
     const form=document.getElementById("checkoutForm");
     const fd=new FormData(form);
-    const n=(document.getElementById("n")?.value||"").trim();
+    const n=(document.getElementById("n")?.value||"").trim().replace(/\s+/g," ");
     const p=(document.getElementById("p")?.value||"").trim();
+    const phoneDigits=p.replace(/\D/g,"");
+    const phoneIsValid=/^(0[567]\d{8}|213[567]\d{8})$/.test(phoneDigits);
+    const nameParts=n.split(" ").filter(Boolean);
+    const validationBox=document.getElementById("checkoutValidationMessage");
+    const showCheckoutError=message=>{
+      if(validationBox){validationBox.textContent=message;validationBox.style.display="block";}
+      throw new Error(message);
+    };
+    if(nameParts.length<2 || nameParts.some(part=>part.length<2))
+      showCheckoutError(t("يرجى كتابة الاسم واللقب، وليس الاسم فقط.","Veuillez saisir le nom et le prénom."));
+    if(!phoneIsValid)
+      showCheckoutError(t("رقم الهاتف غير مكتمل أو غير صحيح. أدخل رقماً جزائرياً كاملاً يبدأ بـ 05 أو 06 أو 07.","Numéro invalide. Saisissez un numéro algérien complet commençant par 05, 06 ou 07."));
+    if(validationBox){validationBox.style.display="none";validationBox.textContent="";}
     const a=(document.getElementById("a")?.value||"").trim();
     const commune=(document.getElementById("commune")?.value||"").trim();
     const prov=document.getElementById("c")?.value||"";
@@ -1639,7 +1653,7 @@ document.getElementById("checkoutForm").addEventListener("submit", async e=>{
     const total=productsTotal+fee;
 
     // Formspree receives every current/future named field in the checkout form.
-    fd.set("الاسم",n); fd.set("رقم الهاتف",p); fd.set("العنوان",a);
+    fd.set("الاسم واللقب",n); fd.set("رقم الهاتف",phoneDigits); fd.set("العنوان",a);
     fd.set("الولاية",prov); fd.set("البلدية",commune);
     fd.set("نوع التوصيل",type==="office"?"مكتب DHD Express":"إلى المنزل");
     fd.set("مكتب DHD Express",office);
@@ -1655,7 +1669,7 @@ document.getElementById("checkoutForm").addEventListener("submit", async e=>{
     const confirmationToken = (crypto && typeof crypto.randomUUID === "function")
       ? crypto.randomUUID()
       : ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));
-    const order={customer_name:n,phone:p,wilaya_name:prov,commune,
+    const order={customer_name:n,phone:phoneDigits,wilaya_name:prov,commune,
       delivery_type:type,office_name:office,products_total:productsTotal,
       delivery_price:fee,grand_total:total,status:"new",
       confirmation_token:confirmationToken};
