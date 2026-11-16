@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- QUEEN-SHOP-SMS-CONFIRMATION-LINK-FIX 2026-11-16 -->
 <html lang="ar" dir="rtl">
 <head>
 <!-- Meta Pixel Code -->
@@ -2417,6 +2418,7 @@ function sendWhatsAppToAllVisibleOrders(){
 
 function buildSMSOrderMessage(order){
   const name=String(order?.customer_name||"").trim() || "زبوننا";
+  const shortOrderId=String(order?.id ?? "").slice(0,8) || "غير متوفر";
   const items=ADMIN_ORDER_ITEMS[String(order?.id)] || ADMIN_ORDER_ITEMS[order?.id] || [];
   const productLines=items.length
     ? items.map(it=>{
@@ -2432,7 +2434,14 @@ function buildSMSOrderMessage(order){
   const wilaya=String(order?.wilaya_name||"").trim();
   const commune=String(order?.commune||"").trim();
   const location=[wilaya,commune].filter(Boolean).join(" — ");
-  return `مرحباً ${name}، شكراً لطلبك من Queen shop! الطلبية: ${productLines}. السعر الإجمالي: ${total} (شاملة التوصيل${location?" إلى "+location:""}). لتأكيد طلبك وشحنه، يرجى الرد بـ 1. للإلغاء، رد بـ 2.`;
+  const confirmationLink=order?.confirmation_token
+    ? shopBaseUrl()+"?confirmOrder="+encodeURIComponent(order.confirmation_token)
+    : "";
+  // Keep SMS short and explicit: no numeric reply instructions. The customer
+  // confirms or cancels from the secure page opened by this link.
+  return `Queen Shop: مرحباً ${name}. طلبك #${shortOrderId}: ${productLines}. الإجمالي ${total}${location?" — "+location:""}.
+لتأكيد الطلب أو إلغائه افتح الرابط واختر الزر المناسب:
+${confirmationLink}`;
 }
 
 function selectedOrdersForBulk(){
@@ -2443,12 +2452,40 @@ function selectedOrdersForBulk(){
   return filteredOrders();
 }
 
-function sendSMSForOrder(order){
-  const phone=String(order?.phone||"").trim();
+async function sendSMSForOrder(order){
+  let phone=String(order?.phone||"").replace(/[^\d+]/g,"").trim();
+  if(phone.startsWith("+")) phone=phone.slice(1);
+  if(phone.startsWith("00")) phone=phone.slice(2);
+  if(phone.startsWith("0")) phone="213"+phone.slice(1);
   if(!phone) return false;
+  // SMS must use the same secure confirmation link as WhatsApp, not the old 1/2 reply flow.
+  if(!order?.confirmation_token){
+    try{
+      const token=(crypto && typeof crypto.randomUUID==="function")
+        ? crypto.randomUUID()
+        : ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));
+      const r=await fetch(ORDERS_URL+"?id=eq."+encodeURIComponent(order.id),{
+        method:"PATCH",
+        headers:{...apiHeaders(""),"Prefer":"return=representation"},
+        body:JSON.stringify({confirmation_token:token})
+      });
+      const rows=await r.json().catch(()=>null);
+      if(!r.ok) throw new Error(rows?.message||rows?.hint||"تعذر حفظ رمز التأكيد في Supabase");
+      order.confirmation_token=Array.isArray(rows)&&rows[0]?.confirmation_token ? rows[0].confirmation_token : token;
+      const cached=ADMIN_ORDERS.find(x=>String(x.id)===String(order.id));
+      if(cached) cached.confirmation_token=order.confirmation_token;
+    }catch(e){
+      alert("لم أتمكن من إنشاء رابط التأكيد لهذه الطلبية. تأكدي من إعداد Supabase.\n"+(e.message||""));
+      return false;
+    }
+  }
   const body=buildSMSOrderMessage(order);
+  if(!body.includes("?confirmOrder=")){
+    alert("لم يتم إنشاء رابط التأكيد لهذه الطلبية.");
+    return false;
+  }
   const url="sms:"+phone+"?body="+encodeURIComponent(body);
-  window.open(url,"_blank","noopener,noreferrer");
+  window.location.href=url;
   return true;
 }
 
